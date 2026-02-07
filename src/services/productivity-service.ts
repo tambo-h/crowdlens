@@ -3,6 +3,8 @@
  * @description Service functions for productivity tools using Upstash Redis
  */
 
+"use server";
+
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
 

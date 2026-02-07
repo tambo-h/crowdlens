@@ -13,16 +13,17 @@ export interface StandupLogRootProps {
 
 export const StandupLogRoot = React.forwardRef<HTMLDivElement, StandupLogRootProps>(
     ({ children, asChild, initialEntries = [], ...props }, ref) => {
-        const { creativeRefreshTrigger } = useProductivity();
+        const { creativeRefreshTrigger, userId } = useProductivity();
         const [entries, setEntries] = React.useState<StandupEntry[]>(initialEntries);
         const [isLoading, setIsLoading] = React.useState(false);
 
         // Initial fetch
         React.useEffect(() => {
             const fetchData = async () => {
+                if (!userId) return;
                 setIsLoading(true);
                 try {
-                    const history = await getStandupHistory({});
+                    const history = await getStandupHistory(userId);
                     setEntries(history);
                 } catch (error) {
                     console.error("Failed to fetch standup history:", error);
@@ -31,12 +32,13 @@ export const StandupLogRoot = React.forwardRef<HTMLDivElement, StandupLogRootPro
                 }
             };
             fetchData();
-        }, [creativeRefreshTrigger]);
+        }, [creativeRefreshTrigger, userId]);
 
         const saveEntry = async (yesterday: string, today: string, blockers: string) => {
+            if (!userId) return;
             setIsLoading(true);
             try {
-                const result = await saveStandupService({ yesterday, today, blockers });
+                const result = await saveStandupService(userId, { yesterday, today, blockers });
                 const newEntry: StandupEntry = {
                     id: result.id,
                     yesterday,

@@ -15,16 +15,17 @@ export interface WeeklyReviewRootProps {
 
 export const WeeklyReviewRoot = React.forwardRef<HTMLDivElement, WeeklyReviewRootProps>(
     ({ children, asChild, initialReviews = [], ...props }, ref) => {
-        const { creativeRefreshTrigger } = useProductivity();
+        const { creativeRefreshTrigger, userId } = useProductivity();
         const [reviews, setReviews] = React.useState<WeeklyReview[]>(initialReviews);
         const [isLoading, setIsLoading] = React.useState(false);
 
         // Initial fetch
         React.useEffect(() => {
             const fetchData = async () => {
+                if (!userId) return;
                 setIsLoading(true);
                 try {
-                    const history = await getWeeklyReviews({});
+                    const history = await getWeeklyReviews(userId);
                     setReviews(history);
                 } catch (error) {
                     console.error("Failed to fetch weekly reviews:", error);
@@ -33,12 +34,13 @@ export const WeeklyReviewRoot = React.forwardRef<HTMLDivElement, WeeklyReviewRoo
                 }
             };
             fetchData();
-        }, [creativeRefreshTrigger]);
+        }, [creativeRefreshTrigger, userId]);
 
         const saveReview = async (accomplishments: string, challenges: string, nextWeekGoals: string, rating: number) => {
+            if (!userId) return;
             setIsLoading(true);
             try {
-                const result = await saveWeeklyReview({ accomplishments, challenges, nextWeekGoals, rating });
+                const result = await saveWeeklyReview(userId, { accomplishments, challenges, nextWeekGoals, rating });
                 const newReview: WeeklyReview = {
                     id: result.id,
                     weekEnding: result.date,

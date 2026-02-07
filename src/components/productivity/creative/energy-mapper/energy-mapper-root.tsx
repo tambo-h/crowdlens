@@ -13,16 +13,17 @@ export interface EnergyMapperRootProps {
 
 export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRootProps>(
     ({ children, asChild, initialEnergyData = [], ...props }, ref) => {
-        const { creativeRefreshTrigger } = useProductivity();
+        const { creativeRefreshTrigger, userId } = useProductivity();
         const [energyData, setEnergyData] = React.useState<EnergyLevel[]>(initialEnergyData);
         const [isLoading, setIsLoading] = React.useState(false);
 
         // Initial fetch
         React.useEffect(() => {
             const fetchData = async () => {
+                if (!userId) return;
                 setIsLoading(true);
                 try {
-                    const data = await getEnergyData({});
+                    const data = await getEnergyData(userId);
                     setEnergyData(data);
                 } catch (error) {
                     console.error("Failed to fetch energy data:", error);
@@ -31,12 +32,13 @@ export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRoo
                 }
             };
             fetchData();
-        }, [creativeRefreshTrigger]);
+        }, [creativeRefreshTrigger, userId]);
 
         const logEnergy = async (level: number, notes?: string) => {
+            if (!userId) return;
             setIsLoading(true);
             try {
-                const result = await logEnergyService({ level, notes });
+                const result = await logEnergyService(userId, { level, notes });
                 const newEntry: EnergyLevel = {
                     id: result.id,
                     level,

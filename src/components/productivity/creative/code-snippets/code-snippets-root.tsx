@@ -13,16 +13,17 @@ export interface CodeSnippetsRootProps {
 
 export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRootProps>(
     ({ children, asChild, initialSnippets = [], ...props }, ref) => {
-        const { creativeRefreshTrigger } = useProductivity();
+        const { creativeRefreshTrigger, userId } = useProductivity();
         const [snippets, setSnippets] = React.useState<Snippet[]>(initialSnippets);
         const [isLoading, setIsLoading] = React.useState(false);
 
         // Initial fetch
         React.useEffect(() => {
             const fetchData = async () => {
+                if (!userId) return;
                 setIsLoading(true);
                 try {
-                    const data = await getSnippets({});
+                    const data = await getSnippets(userId);
                     setSnippets(data);
                 } catch (error) {
                     console.error("Failed to fetch snippets:", error);
@@ -31,12 +32,13 @@ export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRoo
                 }
             };
             fetchData();
-        }, [creativeRefreshTrigger]);
+        }, [creativeRefreshTrigger, userId]);
 
         const saveSnippet = async (title: string, code: string, language: string, tags: string[]) => {
+            if (!userId) return;
             setIsLoading(true);
             try {
-                const result = await saveSnippetService({ title, code, language, tags });
+                const result = await saveSnippetService(userId, { title, code, language, tags });
                 const newSnippet: Snippet = {
                     id: result.id,
                     title,

@@ -26,7 +26,7 @@ export function InspirationQuote({
   category: initialCategory = "productivity",
   isFavorite: initialFavorite = false,
 }: InspirationQuoteProps) {
-  const { creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
+  const { creativeRefreshTrigger, triggerCreativeRefresh, userId } = useProductivity();
   const [favorite, setFavorite] = useState(initialFavorite);
   const [currentQuote, setCurrentQuote] = useState({ text: initialQuote, author: initialAuthor, category: initialCategory });
   const [isLoading, setIsLoading] = useState(false);
@@ -35,9 +35,10 @@ export function InspirationQuote({
   const [newAuthorText, setNewAuthorText] = useState("");
 
   const fetchNewQuote = async (categoryFilter?: string) => {
+    if (!userId) return;
     setIsLoading(true);
     try {
-      const q = await getInspirationalQuote({ category: categoryFilter });
+      const q = await getInspirationalQuote(userId, { category: categoryFilter });
       setCurrentQuote({ text: q.quote, author: q.author, category: q.category });
     } catch (error) {
       console.error("Failed to fetch quote:", error);
@@ -55,10 +56,10 @@ export function InspirationQuote({
   };
 
   const handleSaveCustom = async () => {
-    if (!newQuoteText || !newAuthorText) return;
+    if (!newQuoteText || !newAuthorText || !userId) return;
     setIsLoading(true);
     try {
-      await saveQuote({ quote: newQuoteText, author: newAuthorText, category: "custom" });
+      await saveQuote(userId, { quote: newQuoteText, author: newAuthorText, category: "custom" });
       setShowAddCustom(false);
       setNewQuoteText("");
       setNewAuthorText("");

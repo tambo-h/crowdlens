@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { HabitTrackerProps } from "@/components/productivity/habit-tracker";
-import { getHabits, toggleHabit as toggleHabitService, startPomodoroSession as startPomodoroService } from "@/services/productivity-service";
+import { getHabits, toggleHabit as toggleHabitService, startPomodoroSession as startPomodoroService, seedProductivityData } from "@/services/productivity-service";
 
 interface PomodoroState {
     isRunning: boolean;
@@ -16,12 +16,16 @@ interface PomodoroState {
 }
 
 interface ProductivityContextType {
+    // Auth/User
+    userId: string | null;
+    setUserId: React.Dispatch<React.SetStateAction<string | null>>;
+    onboardGuest: () => void;
+
     // Habits
     habits: any[];
-    setHabits: React.Dispatch<React.SetStateAction<any[]>>;
     isLoadingHabits: boolean;
     refreshHabits: () => Promise<void>;
-    toggleHabit: (habitId: string) => Promise<void>;
+    toggleHabit: (habitId: string, completed: boolean) => Promise<void>;
 
     // Pomodoro
     pomodoro: PomodoroState;
@@ -33,7 +37,7 @@ interface ProductivityContextType {
 
     // View Management
     activeView: string;
-    setActiveView: (view: any) => void;
+    setActiveView: (view: string) => void;
     isChatOpen: boolean;
     setIsChatOpen: (open: boolean) => void;
 
@@ -45,17 +49,14 @@ interface ProductivityContextType {
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
 
 export function ProductivityProvider({ children }: { children: React.ReactNode }) {
+    const [userId, setUserId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState("dashboard");
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [creativeRefreshTrigger, setCreativeRefreshTrigger] = useState(0);
 
-    const triggerCreativeRefresh = useCallback(() => {
-        setCreativeRefreshTrigger(prev => prev + 1);
-    }, []);
-
     // Habits state
     const [habits, setHabits] = useState<any[]>([]);
-    const [isLoadingHabits, setIsLoadingHabits] = useState(true);
+    const [isLoadingHabits, setIsLoadingHabits] = useState(false);
 
     // Pomodoro state
     const [pomodoro, setPomodoro] = useState<PomodoroState>({
@@ -68,48 +69,83 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         longBreakDuration: 15,
     });
 
+    // Load userId from localStorage on mount
+    useEffect(() => {
+        const storedId = localStorage.getItem("crowdlens_user_id");
+        if (storedId) {
+            setUserId(storedId);
+        }
+    }, []);
+
+    // Sync userId to localStorage and seed data
+    useEffect(() => {
+        if (userId) {
+            localStorage.setItem("crowdlens_user_id", userId);
+            // Seed data if this is a new user (or ensure it exists)
+            seedProductivityData(userId).then(() => {
+                triggerCreativeRefresh();
+            });
+        }
+    }, [userId]);
+
+    const triggerCreativeRefresh = useCallback(() => {
+        setCreativeRefreshTrigger(prev => prev + 1);
+    }, []);
+
+    const onboardGuest = useCallback(() => {
+        const guestId = `guest_${Math.random().toString(36).substring(2, 11)}`;
+        setUserId(guestId);
+    }, []);
+
     const refreshHabits = useCallback(async () => {
+        if (!userId) {
+            setIsLoadingHabits(false);
+            return;
+        }
         setIsLoadingHabits(true);
         try {
-            const data = await getHabits({});
-            setHabits(data);
+            const data = await getHabits(userId);
+            setHabits(data || []);
         } catch (err) {
             console.error("Failed to fetch habits", err);
         } finally {
             setIsLoadingHabits(false);
         }
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
-        refreshHabits();
-    }, [refreshHabits, creativeRefreshTrigger]);
+        if (userId) {
+            refreshHabits();
+        }
+    }, [refreshHabits, creativeRefreshTrigger, userId]);
 
-    const toggleHabitAction = async (habitId: string) => {
+    const handleToggleHabit = async (habitId: string, completed: boolean) => {
+        if (!userId) return;
+
         // Optimistic update
-        const habit = habits.find(h => h.id === habitId);
-        if (!habit) return;
-
-        const newStatus = !habit.completedToday;
         setHabits(prev => prev.map(h =>
-            h.id === habitId ? { ...h, completedToday: newStatus, streak: newStatus ? h.streak + 1 : h.streak - 1 } : h
+            h.id === habitId ? { ...h, completedToday: completed, streak: completed ? h.streak + 1 : h.streak - 1 } : h
         ));
 
         try {
-            await toggleHabitService({ habitId, completed: newStatus });
+            await toggleHabitService(userId, { habitId, completed });
         } catch (err) {
             console.error("Failed to toggle habit", err);
             refreshHabits(); // Rollback
         }
     };
 
-    const startPomodoro = useCallback((props: Partial<PomodoroState>) => {
+    const startPomodoro = useCallback(async (props: Partial<PomodoroState>) => {
+        if (userId) {
+            await startPomodoroService(userId);
+        }
         setPomodoro(prev => ({
             ...prev,
             ...props,
             timeLeft: props.workDuration ? props.workDuration * 60 : prev.timeLeft,
             isRunning: true
         }));
-    }, []);
+    }, [userId]);
 
     const pausePomodoro = useCallback(() => setPomodoro(prev => ({ ...prev, isRunning: false })), []);
 
@@ -122,7 +158,6 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     const updatePomodoroDurations = useCallback((work: number, breakD: number, long: number) => {
         setPomodoro(prev => {
-            // Only update if values changed to prevent unnecessary re-renders
             if (prev.workDuration === work && prev.breakDuration === breakD && prev.longBreakDuration === long) {
                 return prev;
             }
@@ -142,8 +177,6 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
             const newTime = prev.timeLeft - 1;
             if (newTime === 0) {
-                // Handle session switch logic here or in a separate effect
-                // For simplicity in context, we'll just stop for now or handle in component
                 return { ...prev, timeLeft: 0, isRunning: false };
             }
             return { ...prev, timeLeft: newTime };
@@ -160,10 +193,11 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     return (
         <ProductivityContext.Provider value={{
-            habits, setHabits, isLoadingHabits, refreshHabits, toggleHabit: toggleHabitAction,
+            habits, isLoadingHabits, refreshHabits, toggleHabit: handleToggleHabit,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
-            creativeRefreshTrigger, triggerCreativeRefresh
+            creativeRefreshTrigger, triggerCreativeRefresh,
+            userId, setUserId, onboardGuest
         }}>
             {children}
         </ProductivityContext.Provider>

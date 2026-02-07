@@ -13,16 +13,17 @@ export interface DistractionJournalRootProps {
 
 export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, DistractionJournalRootProps>(
     ({ children, asChild, initialDistractions = [], ...props }, ref) => {
-        const { creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
+        const { creativeRefreshTrigger, triggerCreativeRefresh, userId } = useProductivity();
         const [distractions, setDistractions] = React.useState<Distraction[]>(initialDistractions);
         const [isLoading, setIsLoading] = React.useState(false);
 
         // Initial fetch
         React.useEffect(() => {
             const fetchData = async () => {
+                if (!userId) return;
                 setIsLoading(true);
                 try {
-                    const data = await getDistractions({});
+                    const data = await getDistractions(userId);
                     setDistractions(data);
                 } catch (error) {
                     console.error("Failed to fetch distractions:", error);
@@ -31,12 +32,13 @@ export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, Distracti
                 }
             };
             fetchData();
-        }, [creativeRefreshTrigger]);
+        }, [creativeRefreshTrigger, userId]);
 
         const addDistraction = async (description: string, durationMinutes: number, category?: string) => {
+            if (!userId) return;
             setIsLoading(true);
             try {
-                const result = await logDistraction({ description, durationMinutes, category });
+                const result = await logDistraction(userId, { description, durationMinutes, category });
                 const newDistraction: Distraction = {
                     id: result.id,
                     description,

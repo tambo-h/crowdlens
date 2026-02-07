@@ -28,7 +28,8 @@ import {
   FileCode,
   MessageSquare,
   Activity,
-  CalendarDays
+  CalendarDays,
+  Sparkles
 } from "lucide-react";
 
 // Creative tool imports
@@ -38,8 +39,14 @@ import { StyledStandupLog } from "@/components/productivity/creative/standup-log
 import { StyledEnergyMapper } from "@/components/productivity/creative/energy-mapper/styled-mapper";
 import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-review/styled-review";
 
+import { Onboarding } from "@/components/auth/onboarding";
+
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh, userId } = useProductivity();
+
+  if (!userId) {
+    return <Onboarding />;
+  }
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -92,8 +99,9 @@ function HomeContent() {
         <div className="p-4 border-t border-border space-y-2">
           <button
             onClick={async () => {
+              if (!userId) return;
               const { seedProductivityData } = await import("@/services/productivity-service");
-              await seedProductivityData();
+              await seedProductivityData(userId);
               triggerCreativeRefresh();
               alert("Guest data seeded! Habits, links, and rules reset.");
             }}
@@ -174,34 +182,28 @@ function HomeContent() {
   );
 }
 
-const Sparkles = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
-  </svg>
-);
 
 const TamboProviderWithContext = () => {
-  const { triggerCreativeRefresh } = useProductivity();
+  const { triggerCreativeRefresh, userId } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
     if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveHabit", "saveLink", "togglePracticedRule", "saveQuote", "seedProductivityData"].includes(t.name)) {
       return {
         ...t,
         tool: async (...args: any[]) => {
-          const res = await (t.tool as any)(...args);
+          if (!userId) {
+            console.error("User not logged in, cannot call tool:", t.name);
+            return { error: "Please log in first." };
+          }
+          // Inject userId as first argument
+          const res = await (t.tool as any)(userId, ...args);
           triggerCreativeRefresh();
           return res;
         }
       };
     }
     return t;
-  }), [triggerCreativeRefresh]);
+  }), [triggerCreativeRefresh, userId]);
 
   return (
     <TamboProvider

@@ -39,12 +39,13 @@ export function ProductivityDashboard({
   userName: initialUserName,
   ...initialStats
 }: ProductivityDashboardProps) {
-  const { pomodoro, habits } = useProductivity();
+  const { pomodoro, habits, userId } = useProductivity();
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    getProductivityDashboard({}).then(setStats);
-  }, []);
+    if (!userId) return;
+    getProductivityDashboard(userId).then(setStats);
+  }, [userId]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();

@@ -1,6 +1,6 @@
 /**
  * @file productivity-service.ts
- * @description Service functions for productivity tools using Upstash Redis
+ * @description Service functions for productivity tools using Upstash Redis with multi-user support
  */
 
 "use server";
@@ -8,15 +8,20 @@
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
 
-const HABITS_KEY_PREFIX = "habits:user_1";
-const LINKS_KEY_PREFIX = "links:user_1";
-const POMODORO_KEY_PREFIX = "pomodoro:user_1";
-const DISTRACTIONS_KEY = "distractions:user_1";
-const SNIPPETS_KEY = "snippets:user_1";
-const STANDUP_KEY = "standup:user_1";
-const ENERGY_KEY = "energy:user_1";
-const REVIEW_KEY = "review:user_1";
-const QUOTES_KEY = "quotes:user_1";
+// Helper to get user-specific keys
+const getKeys = (userId: string) => ({
+  habits: `habits:${userId}`,
+  links: `links:${userId}`,
+  pomodoro: `pomodoro:${userId}`,
+  distractions: `distractions:${userId}`,
+  snippets: `snippets:${userId}`,
+  standup: `standup:${userId}`,
+  energy: `energy:${userId}`,
+  review: `review:${userId}`,
+  quotes: `quotes:${userId}`,
+  practiced_rules: `practiced_rules:${userId}`,
+  is_seeded: `is_seeded:${userId}`,
+});
 
 export interface Habit {
   id: string;
@@ -30,39 +35,27 @@ export interface Habit {
 /**
  * Get sample productivity data for dashboard
  */
-export async function getProductivityDashboard(input: {
-  userId?: string;
-}): Promise<any> {
-  const habits = await getHabits({});
-  const sessions = await redis.get(`${POMODORO_KEY_PREFIX}:today`) || 0;
+export async function getProductivityDashboard(userId: string): Promise<any> {
+  const keys = getKeys(userId);
+  const habits = await getHabits(userId);
+  const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
 
   return {
     pomodoroSessionsToday: Number(sessions),
     habitsCompletedToday: habits.filter(h => h.completedToday).length,
     totalHabits: habits.length,
     currentStreak: habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0,
-    recentLinks: await getSavedLinks({ limit: 3 }),
-    quote: {
-      text: "The best way to predict the future is to invent it.",
-      author: "Alan Kay",
-    },
+    recentLinks: await getSavedLinks(userId, { limit: 3 }),
+    quote: await getInspirationalQuote(userId, {}),
   };
 }
 
 /**
  * Get user's habits from Redis
  */
-export async function getHabits(input: {
-  userId?: string;
-  category?: string;
-}): Promise<Habit[]> {
-  const data = await redis.get<Habit[]>(HABITS_KEY_PREFIX);
-  const habits = data || [
-    { id: "1", name: "Morning Code Review", category: "Code", streak: 12, completedToday: true },
-    { id: "2", name: "Read Tech Articles", category: "Learn", streak: 8, completedToday: true },
-    { id: "3", name: "30min Exercise", category: "Health", streak: 5, completedToday: false },
-    { id: "4", name: "Daily Standup Log", category: "Review", streak: 15, completedToday: false },
-  ];
+export async function getHabits(userId: string, input: { category?: string } = {}): Promise<Habit[]> {
+  const keys = getKeys(userId);
+  const habits = await redis.get<Habit[]>(keys.habits) || [];
 
   if (input.category) return habits.filter((h) => h.category === input.category);
   return habits;
@@ -71,8 +64,9 @@ export async function getHabits(input: {
 /**
  * Toggle habit completion and persist to Redis
  */
-export async function toggleHabit(input: { habitId: string, completed: boolean }): Promise<any> {
-  const habits = await getHabits({});
+export async function toggleHabit(userId: string, input: { habitId: string, completed: boolean }): Promise<any> {
+  const keys = getKeys(userId);
+  const habits = await getHabits(userId);
   const updatedHabits = habits.map(h => {
     if (h.id === input.habitId) {
       const newStreak = input.completed ? h.streak + 1 : Math.max(0, h.streak - 1);
@@ -86,46 +80,49 @@ export async function toggleHabit(input: { habitId: string, completed: boolean }
     return h;
   });
 
-  await redis.set(HABITS_KEY_PREFIX, updatedHabits);
+  await redis.set(keys.habits, updatedHabits);
   return { success: true };
 }
 
 /**
  * Save new habit (called by AI)
  */
-export async function saveHabit(habit: Omit<Habit, "id" | "streak" | "completedToday">): Promise<Habit> {
-  const habits = await getHabits({});
+export async function saveHabit(userId: string, habit: Omit<Habit, "id" | "streak" | "completedToday">): Promise<Habit> {
+  const keys = getKeys(userId);
+  const habits = await getHabits(userId);
   const newHabit: Habit = {
     ...habit,
     id: `h_${Date.now()}`,
     streak: 0,
     completedToday: false
   };
-  await redis.set(HABITS_KEY_PREFIX, [newHabit, ...habits]);
+  await redis.set(keys.habits, [newHabit, ...habits]);
   return newHabit;
 }
 
 /**
  * Get saved links
  */
-export async function getSavedLinks(input: { limit?: number }): Promise<any[]> {
-  const links = await redis.get<any[]>(LINKS_KEY_PREFIX) || [];
+export async function getSavedLinks(userId: string, input: { limit?: number } = {}): Promise<any[]> {
+  const keys = getKeys(userId);
+  const links = await redis.get<any[]>(keys.links) || [];
   return links.slice(0, input.limit || 10);
 }
 
 /**
  * Save a new link
  */
-export async function saveLink(input: { url: string, title: string, tags: string[], notes?: string }): Promise<any> {
-  const links = await redis.get<any[]>(LINKS_KEY_PREFIX) || [];
+export async function saveLink(userId: string, input: { url: string, title: string, tags: string[], notes?: string }): Promise<any> {
+  const keys = getKeys(userId);
+  const links = await redis.get<any[]>(keys.links) || [];
   const newLink = { ...input, id: `l_${Date.now()}`, savedAt: new Date().toISOString() };
-  await redis.set(LINKS_KEY_PREFIX, [newLink, ...links]);
+  await redis.set(keys.links, [newLink, ...links]);
   return newLink;
 }
 
-// ... rest of the services will be updated to use Redis as we implement sync for them
-export async function getInspirationalQuote(input: { category?: string }) {
-  const customQuotes = await redis.get<any[]>(QUOTES_KEY) || [];
+export async function getInspirationalQuote(userId: string, input: { category?: string } = {}) {
+  const keys = getKeys(userId);
+  const customQuotes = await redis.get<any[]>(keys.quotes) || [];
   const defaultQuotes = [
     { quote: "The best way to predict the future is to invent it.", author: "Alan Kay", category: "productivity" },
     { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs", category: "productivity" },
@@ -145,96 +142,115 @@ export async function getInspirationalQuote(input: { category?: string }) {
   return finalPool[Math.floor(Math.random() * finalPool.length)];
 }
 
-export async function saveQuote(input: { quote: string, author: string, category: string }) {
-  const customQuotes = await redis.get<any[]>(QUOTES_KEY) || [];
+export async function saveQuote(userId: string, input: { quote: string, author: string, category: string }) {
+  const keys = getKeys(userId);
+  const customQuotes = await redis.get<any[]>(keys.quotes) || [];
   const newQuote = { ...input, id: `q_${Date.now()}` };
-  await redis.set(QUOTES_KEY, [newQuote, ...customQuotes]);
+  await redis.set(keys.quotes, [newQuote, ...customQuotes]);
   return newQuote;
 }
 
-export async function startPomodoroSession(input: any) {
-  await redis.incr(`${POMODORO_KEY_PREFIX}:today`);
+export async function startPomodoroSession(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  await redis.incr(`${keys.pomodoro}:today`);
   return { success: true };
 }
 
-export async function logDistraction(input: { description: string, durationMinutes: number, category?: string }) {
-  const items = await redis.get<any[]>(DISTRACTIONS_KEY) || [];
+export async function logDistraction(userId: string, input: { description: string, durationMinutes: number, category?: string }) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.distractions) || [];
   const newItem = { ...input, id: `d_${Date.now()}`, timestamp: new Date().toISOString() };
-  await redis.set(DISTRACTIONS_KEY, [newItem, ...items]);
+  await redis.set(keys.distractions, [newItem, ...items]);
   return newItem;
 }
 
-export async function getDistractions(input: any) {
-  return await redis.get<any[]>(DISTRACTIONS_KEY) || [];
+export async function getDistractions(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<any[]>(keys.distractions) || [];
 }
 
-export async function saveSnippet(input: { title: string, code: string, language: string, tags?: string[] }) {
-  const items = await redis.get<any[]>(SNIPPETS_KEY) || [];
+export async function saveSnippet(userId: string, input: { title: string, code: string, language: string, tags?: string[] }) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.snippets) || [];
   const newItem = { ...input, id: `s_${Date.now()}`, savedAt: new Date().toISOString() };
-  await redis.set(SNIPPETS_KEY, [newItem, ...items]);
+  await redis.set(keys.snippets, [newItem, ...items]);
   return newItem;
 }
 
-export async function getSnippets(input: any) {
-  return await redis.get<any[]>(SNIPPETS_KEY) || [];
+export async function getSnippets(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<any[]>(keys.snippets) || [];
 }
 
-export async function saveStandupEntry(input: { today: string, yesterday: string, blockers: string }) {
-  const items = await redis.get<any[]>(STANDUP_KEY) || [];
+export async function saveStandupEntry(userId: string, input: { today: string, yesterday: string, blockers: string }) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.standup) || [];
   const newItem = { ...input, id: `st_${Date.now()}`, date: new Date().toISOString() };
-  await redis.set(STANDUP_KEY, [newItem, ...items]);
+  await redis.set(keys.standup, [newItem, ...items]);
   return newItem;
 }
 
-export async function getStandupHistory(input: any) {
-  return await redis.get<any[]>(STANDUP_KEY) || [];
+export async function getStandupHistory(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<any[]>(keys.standup) || [];
 }
 
-export async function logEnergyLevel(input: { level: number, notes?: string }) {
-  const items = await redis.get<any[]>(ENERGY_KEY) || [];
+export async function logEnergyLevel(userId: string, input: { level: number, notes?: string }) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.energy) || [];
   const newItem = { ...input, id: `e_${Date.now()}`, timestamp: new Date().toISOString() };
-  await redis.set(ENERGY_KEY, [newItem, ...items]);
+  await redis.set(keys.energy, [newItem, ...items]);
   return newItem;
 }
 
-export async function getEnergyData(input: any) {
-  return await redis.get<any[]>(ENERGY_KEY) || [];
+export async function getEnergyData(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<any[]>(keys.energy) || [];
 }
 
-export async function saveWeeklyReview(input: { accomplishments: string, challenges: string, nextWeekGoals: string, rating: number }) {
-  const items = await redis.get<any[]>(REVIEW_KEY) || [];
+export async function saveWeeklyReview(userId: string, input: { accomplishments: string, challenges: string, nextWeekGoals: string, rating: number }) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.review) || [];
   const newItem = { ...input, id: `w_${Date.now()}`, date: new Date().toISOString() };
-  await redis.set(REVIEW_KEY, [newItem, ...items]);
+  await redis.set(keys.review, [newItem, ...items]);
   return newItem;
 }
 
-const PRACTICED_RULES_KEY = "practiced_rules:user_1";
-
-export async function getWeeklyReviews(input: any) {
-  return await redis.get<any[]>(REVIEW_KEY) || [];
+export async function getWeeklyReviews(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<any[]>(keys.review) || [];
 }
 
-export async function getPracticedRules(input: any) {
-  return await redis.get<number[]>(PRACTICED_RULES_KEY) || [];
+export async function getPracticedRules(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  return await redis.get<number[]>(keys.practiced_rules) || [];
 }
 
-export async function togglePracticedRule(input: { ruleId: number }) {
-  const practiced = await getPracticedRules({});
+export async function togglePracticedRule(userId: string, input: { ruleId: number }) {
+  const keys = getKeys(userId);
+  const practiced = await getPracticedRules(userId);
   const isPracticed = practiced.includes(input.ruleId);
   const updated = isPracticed
     ? practiced.filter(id => id !== input.ruleId)
     : [...practiced, input.ruleId];
 
-  await redis.set(PRACTICED_RULES_KEY, updated);
+  await redis.set(keys.practiced_rules, updated);
   return { success: true, practiced: updated };
 }
 
-export async function getPomodoroStats(input: any) {
-  const sessions = await redis.get(`${POMODORO_KEY_PREFIX}:today`) || 0;
+export async function getPomodoroStats(userId: string, input: any = {}) {
+  const keys = getKeys(userId);
+  const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
   return { totalSessions: Number(sessions) };
 }
 
-export async function seedProductivityData() {
+export async function seedProductivityData(userId: string) {
+  const keys = getKeys(userId);
+
+  // Check if already seeded to prevent overwriting user work
+  const isSeeded = await redis.get(keys.is_seeded);
+  if (isSeeded) return { success: true, alreadySeeded: true };
+
   const habits: Habit[] = [
     { id: "h1", name: "Deep Work (2h)", category: "Code", streak: 5, completedToday: false },
     { id: "h2", name: "Read Technical Book", category: "Learn", streak: 3, completedToday: false },
@@ -248,13 +264,17 @@ export async function seedProductivityData() {
     { id: "l2", title: "Upstash Redis", url: "https://upstash.com", tags: ["db", "redis"], savedAt: new Date().toISOString() }
   ];
 
-  await redis.set(HABITS_KEY_PREFIX, habits);
-  await redis.set(LINKS_KEY_PREFIX, links);
-  await redis.del(DISTRACTIONS_KEY);
-  await redis.del(SNIPPETS_KEY);
-  await redis.del(ENERGY_KEY);
-  await redis.del(REVIEW_KEY);
-  await redis.del(QUOTES_KEY);
+  await redis.set(keys.habits, habits);
+  await redis.set(keys.links, links);
+  await redis.set(keys.is_seeded, true);
+
+  // Clear others for fresh user
+  await redis.del(keys.distractions);
+  await redis.del(keys.snippets);
+  await redis.del(keys.energy);
+  await redis.del(keys.review);
+  await redis.del(keys.quotes);
+  await redis.del(keys.practiced_rules);
 
   return { success: true };
 }

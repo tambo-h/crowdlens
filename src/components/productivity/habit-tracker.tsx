@@ -84,7 +84,7 @@ export function HabitTracker({ habits: initialHabits = [], viewMode = "week" }: 
               <div className="flex items-center gap-3 flex-1">
                 {/* Checkbox */}
                 <button
-                  onClick={() => toggleHabit(habit.id)}
+                  onClick={() => toggleHabit(habit.id, !habit.completedToday)}
                   className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${habit.completedToday
                     ? "bg-primary border-primary"
                     : "border-border hover:border-primary/50"

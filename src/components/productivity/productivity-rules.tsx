@@ -21,7 +21,7 @@ type ProductivityRulesProps = z.input<typeof productivityRulesSchema>;
 export function ProductivityRules({
   showProgress = true,
 }: ProductivityRulesProps) {
-  const { creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
+  const { creativeRefreshTrigger, triggerCreativeRefresh, userId } = useProductivity();
   const [practiced, setPracticed] = useState<number[]>([]);
   const [expandedRule, setExpandedRule] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,9 +29,10 @@ export function ProductivityRules({
   // Initial fetch and sync with global trigger
   useEffect(() => {
     const fetchData = async () => {
+      if (!userId) return;
       setIsLoading(true);
       try {
-        const data = await getPracticedRules({});
+        const data = await getPracticedRules(userId);
         setPracticed(data);
       } catch (error) {
         console.error("Failed to fetch practiced rules:", error);
@@ -40,7 +41,7 @@ export function ProductivityRules({
       }
     };
     fetchData();
-  }, [creativeRefreshTrigger]);
+  }, [creativeRefreshTrigger, userId]);
 
   const togglePracticed = async (ruleId: number) => {
     // Optimistic update
@@ -48,14 +49,17 @@ export function ProductivityRules({
     setPracticed(prev => isPracticed ? prev.filter(id => id !== ruleId) : [...prev, ruleId]);
 
     try {
-      await togglePracticedRule({ ruleId });
+      if (!userId) return;
+      await togglePracticedRule(userId, { ruleId });
       // Notify other components if needed (though rules are mostly local to this view)
       triggerCreativeRefresh();
     } catch (error) {
       console.error("Failed to toggle rule:", error);
       // Revert on error
-      const freshData = await getPracticedRules({});
-      setPracticed(freshData);
+      if (userId) {
+        const freshData = await getPracticedRules(userId);
+        setPracticed(freshData);
+      }
     }
   };
 

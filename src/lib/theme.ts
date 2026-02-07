@@ -13,9 +13,9 @@
 export const colors = {
   // Primary Colors - Soft Blues
   primary: {
-    blue: "#A2D2FF",
-    blueLight: "#BDE0FE",
-    blueDark: "#7BAFD4",
+    blue: "#6366f1", // Indigo/Purple accent from onboarding
+    blueLight: "#818cf8",
+    blueDark: "#4f46e5",
   },
 
   // Background Colors - Off-white and light grays
@@ -27,9 +27,9 @@ export const colors = {
 
   // Dark Mode Backgrounds
   backgroundDark: {
-    main: "#1A1D23",
-    surface: "#22262E",
-    card: "#2A2F3A",
+    main: "#050505", // Matching onboarding
+    surface: "#0a0a0a",
+    card: "#0f0f0f",
   },
 
   // Accent Colors

@@ -21,9 +21,23 @@ export const linkCardSchema = z.object({
   viewMode: z.enum(["cards", "list"]).default("cards").describe("Display mode"),
 });
 
+import { useProductivity } from "@/context/productivity-context";
+import { useEffect, useState } from "react";
+import { getSavedLinks } from "@/services/productivity-service";
+
 type LinkCardProps = z.infer<typeof linkCardSchema>;
 
-export function LinkCard({ links = [], viewMode = "cards" }: any) {
+export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) {
+  const { userId, creativeRefreshTrigger } = useProductivity();
+  const [links, setLinks] = useState<any[]>(initialLinks);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    setIsLoading(true);
+    getSavedLinks(userId).then(setLinks).finally(() => setIsLoading(false));
+  }, [userId, creativeRefreshTrigger]);
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "Just now";
     try {
@@ -42,12 +56,22 @@ export function LinkCard({ links = [], viewMode = "cards" }: any) {
     displayLinks = [arguments[0]];
   }
 
+  const linksToDisplay = links.length > 0 ? links : displayLinks;
+
+  if (isLoading && links.length === 0) {
+    return (
+      <div className="bg-card rounded-xl p-12 border border-border text-center flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   if (viewMode === "list") {
     return (
       <div className="bg-card rounded-xl p-6 border border-border max-w-4xl">
         <h2 className="text-2xl font-bold text-foreground mb-4">📚 Saved Links</h2>
         <div className="space-y-2">
-          {displayLinks.map((link, idx) => (
+          {linksToDisplay.map((link, idx) => (
             <a
               key={link.id || idx}
               href={link.url}
@@ -87,7 +111,7 @@ export function LinkCard({ links = [], viewMode = "cards" }: any) {
     <div className="bg-card rounded-xl p-6 border border-border max-w-6xl">
       <h2 className="text-2xl font-bold text-foreground mb-6">📚 Saved Links</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {displayLinks.map((link, idx) => (
+        {linksToDisplay.map((link, idx) => (
           <a
             key={link.id || idx}
             href={link.url}
@@ -132,7 +156,7 @@ export function LinkCard({ links = [], viewMode = "cards" }: any) {
         ))}
       </div>
 
-      {displayLinks.length === 0 && (
+      {linksToDisplay.length === 0 && (
         <div className="text-center py-12">
           <span className="text-6xl block mb-4">🔗</span>
           <p className="text-muted-foreground">No links saved yet</p>

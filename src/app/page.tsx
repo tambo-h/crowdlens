@@ -1,137 +1,200 @@
-import { ApiKeyCheck } from "@/components/ApiKeyCheck";
-import Image from "next/image";
+"use client";
 
-const KeyFilesSection = () => (
-  <div className="bg-white px-8 py-4">
-    <h2 className="text-xl font-semibold mb-4">How it works:</h2>
-    <ul className="space-y-4 text-gray-600">
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium">src/app/layout.tsx</code> - Main layout
-          with TamboProvider
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium font-mono">src/app/chat/page.tsx</code> -
-          Chat page with TamboProvider and MCP integration
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium font-mono">
-            src/app/interactables/page.tsx
-          </code>{" "}
-          - Interactive demo page with tools and components
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium font-mono">
-            src/components/tambo/message-thread-full.tsx
-          </code>{" "}
-          - Chat UI
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium font-mono">
-            src/components/tambo/graph.tsx
-          </code>{" "}
-          - A generative graph component
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span>📄</span>
-        <span>
-          <code className="font-medium font-mono">
-            src/services/population-stats.ts
-          </code>{" "}
-          - Example tool implementation with mock population data
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-blue-500">📄</span>
-        <span>
-          <code className="font-medium font-mono">src/lib/tambo.ts</code> -
-          Component and tool registration
-        </span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-blue-500">📄</span>
-        <span>
-          <code className="font-medium font-mono">README.md</code> - For more
-          details check out the README
-        </span>
-      </li>
-    </ul>
-    <div className="flex gap-4 flex-wrap mt-4">
-      <a
-        href="https://docs.tambo.co"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="px-6 py-3 rounded-md font-medium transition-colors text-lg mt-4 border border-gray-300 hover:bg-gray-50"
-      >
-        View Docs
-      </a>
-      <a
-        href="https://tambo.co/dashboard"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="px-6 py-3 rounded-md font-medium transition-colors text-lg mt-4 border border-gray-300 hover:bg-gray-50"
-      >
-        Dashboard
-      </a>
-    </div>
-  </div>
-);
+import { ApiKeyCheck } from "@/components/ApiKeyCheck";
+import { ProductivityDashboard } from "@/components/productivity/productivity-dashboard";
+import { PomodoroTimer } from "@/components/productivity/pomodoro-timer";
+import { HabitTracker } from "@/components/productivity/habit-tracker";
+import { InspirationQuote } from "@/components/productivity/inspiration-quote";
+import { LinkCard } from "@/components/productivity/link-card";
+import { ProductivityRules } from "@/components/productivity/productivity-rules";
+import { useState } from "react";
 
 export default function Home() {
+  const [activeView, setActiveView] = useState<"dashboard" | "pomodoro" | "habits" | "links" | "inspiration" | "rules">("dashboard");
+
+  // Sample data for components
+  const dashboardData = {
+    userName: "Developer",
+    pomodoroSessionsToday: 3,
+    habitsCompletedToday: 2,
+    totalHabits: 4,
+    currentStreak: 7,
+    recentLinks: [
+      { title: "React Documentation", url: "https://react.dev", tags: ["react", "docs"] },
+      { title: "TypeScript Handbook", url: "https://www.typescriptlang.org/docs/", tags: ["typescript"] },
+    ],
+    quote: {
+      text: "The best way to predict the future is to invent it.",
+      author: "Alan Kay",
+    },
+  };
+
+  const habitsData = [
+    { id: "1", name: "Morning Code Review", category: "Code" as const, streak: 12, completedToday: true },
+    { id: "2", name: "Read Tech Articles", category: "Learn" as const, streak: 8, completedToday: true },
+    { id: "3", name: "30min Exercise", category: "Health" as const, streak: 5, completedToday: false },
+    { id: "4", name: "Daily Standup Log", category: "Review" as const, streak: 15, completedToday: false },
+  ];
+
+  const linksData = [
+    {
+      id: "1",
+      title: "React 19 Release Notes",
+      url: "https://react.dev/blog/2024/12/05/react-19",
+      tags: ["react", "javascript"],
+      notes: "New features and breaking changes",
+      savedAt: new Date().toISOString(),
+    },
+    {
+      id: "2",
+      title: "Next.js 15 Documentation",
+      url: "https://nextjs.org/docs",
+      tags: ["nextjs", "react"],
+      notes: "App Router guide",
+      savedAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+    {
+      id: "3",
+      title: "Tailwind CSS v4",
+      url: "https://tailwindcss.com",
+      tags: ["tailwind", "css"],
+      savedAt: new Date(Date.now() - 172800000).toISOString(),
+    },
+  ];
+
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center justify-center font-[family-name:var(--font-geist-sans)]">
-      <main className="max-w-2xl w-full space-y-8">
-        <div className="flex flex-col items-center">
-          <a href="https://tambo.co" target="_blank" rel="noopener noreferrer">
-            <Image
-              src="/Octo-Icon.svg"
-              alt="Tambo AI Logo"
-              width={80}
-              height={80}
-              className="mb-4"
-            />
-          </a>
-          <h1 className="text-4xl text-center">tambo-ai chat template</h1>
+    <div className="min-h-screen bg-background">
+      {/* Navigation Sidebar */}
+      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 space-y-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-primary mb-1">ProductivityFlow</h1>
+          <p className="text-xs text-muted-foreground">Calm Dev Edition</p>
         </div>
 
-        <div className="w-full space-y-8">
-          <div className="bg-white px-8 py-4">
-            <h2 className="text-xl font-semibold mb-4">Setup Checklist</h2>
+        <nav className="space-y-2">
+          <button
+            onClick={() => setActiveView("dashboard")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "dashboard"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            📊 Dashboard
+          </button>
+          <button
+            onClick={() => setActiveView("pomodoro")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "pomodoro"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            ⏱️ Pomodoro
+          </button>
+          <button
+            onClick={() => setActiveView("habits")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "habits"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            ✅ Habits
+          </button>
+          <button
+            onClick={() => setActiveView("links")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "links"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            🔗 Links
+          </button>
+          <button
+            onClick={() => setActiveView("inspiration")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "inspiration"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            💡 Inspiration
+          </button>
+          <button
+            onClick={() => setActiveView("rules")}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              activeView === "rules"
+                ? "bg-primary text-primary-foreground font-medium"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            📘 Productivity Rules
+          </button>
+        </nav>
+
+        <div className="absolute bottom-6 left-6 right-6 space-y-3">
+          <div className="border-t border-border pt-4">
             <ApiKeyCheck>
-              <div className="flex gap-4 flex-wrap">
-                <a
-                  href="/chat"
-                  className="px-6 py-3 rounded-md font-medium shadow-sm transition-colors text-lg mt-4 bg-[#7FFFC3] hover:bg-[#72e6b0] text-gray-800"
-                >
-                  Go to Chat →
-                </a>
-                <a
-                  href="/interactables"
-                  className="px-6 py-3 rounded-md font-medium shadow-sm transition-colors text-lg mt-4 bg-[#FFE17F] hover:bg-[#f5d570] text-gray-800"
-                >
-                  Interactables Demo →
-                </a>
-              </div>
+              <a
+                href="/chat"
+                className="block w-full text-center px-4 py-2 rounded-lg bg-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity text-sm"
+              >
+                💬 AI Chat
+              </a>
             </ApiKeyCheck>
           </div>
-
-          <KeyFilesSection />
+          <a
+            href="/theme-test"
+            className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Theme Test
+          </a>
         </div>
-      </main>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="ml-64 p-8">
+        <div className="max-w-7xl mx-auto">
+          {activeView === "dashboard" && <ProductivityDashboard {...dashboardData} />}
+          
+          {activeView === "pomodoro" && (
+            <div className="flex justify-center items-center min-h-[80vh]">
+              <PomodoroTimer workDuration={25} breakDuration={5} longBreakDuration={15} autoStart={false} />
+            </div>
+          )}
+          
+          {activeView === "habits" && (
+            <div className="flex justify-center items-start pt-12">
+              <HabitTracker habits={habitsData} viewMode="week" />
+            </div>
+          )}
+          
+          {activeView === "links" && (
+            <div className="flex justify-center items-start pt-12">
+              <LinkCard links={linksData} viewMode="cards" />
+            </div>
+          )}
+          
+          {activeView === "inspiration" && (
+            <div className="flex justify-center items-center min-h-[80vh]">
+              <InspirationQuote
+                quote="The best way to predict the future is to invent it."
+                author="Alan Kay"
+                category="technology"
+                isFavorite={false}
+              />
+            </div>
+          )}
+          
+          {activeView === "rules" && (
+            <div className="flex justify-center items-start pt-12">
+              <ProductivityRules showProgress={true} practicedRules={[]} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

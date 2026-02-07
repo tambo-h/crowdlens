@@ -44,6 +44,7 @@ UPSTASH_REDIS_REST_TOKEN=...
 
 Notes:
 
+- You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -60,7 +61,7 @@ Open http://localhost:3000.
 - `/` — main CrowdLens UI (dashboard + AI side panel)
 - `/chat` — full-screen Tambo chat
 - `/interactables` — Tambo UI primitives playground
-- `/api/test-redis` — sanity check Upstash Redis connectivity
+- `/api/test-redis` — sanity check Upstash Redis connectivity; useful if the dashboard widgets don’t seem to persist data
 
 ## How Tambo is wired up
 
@@ -68,6 +69,8 @@ Tambo is configured in `src/lib/tambo.ts`:
 
 - `components`: React components that the model can render (Pomodoro timer, habit tracker, weekly review, etc.)
 - `tools`: server-side functions the model can call (read/write habits, save links, log distractions, …)
+
+See the `components` and `tools` arrays in `src/lib/tambo.ts` for the current configuration.
 
 At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/chat` and `/interactables`).
 
@@ -84,7 +87,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 ## Project notes / known limitations
 
 - The current Redis keying in `src/services/productivity-service.ts` is hard-coded to a placeholder user (`user_1`).
-- Auth isn’t implemented yet.
+- In non-local environments, this means all users share the same data; don’t deploy this as-is to production without adding proper auth and per-user keying.
 
 ## Scripts
 

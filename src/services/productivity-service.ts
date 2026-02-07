@@ -16,6 +16,7 @@ const SNIPPETS_KEY = "snippets:user_1";
 const STANDUP_KEY = "standup:user_1";
 const ENERGY_KEY = "energy:user_1";
 const REVIEW_KEY = "review:user_1";
+const QUOTES_KEY = "quotes:user_1";
 
 export interface Habit {
   id: string;
@@ -123,8 +124,32 @@ export async function saveLink(input: { url: string, title: string, tags: string
 }
 
 // ... rest of the services will be updated to use Redis as we implement sync for them
-export async function getInspirationalQuote(input: any) {
-  return { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs", category: "productivity" };
+export async function getInspirationalQuote(input: { category?: string }) {
+  const customQuotes = await redis.get<any[]>(QUOTES_KEY) || [];
+  const defaultQuotes = [
+    { quote: "The best way to predict the future is to invent it.", author: "Alan Kay", category: "productivity" },
+    { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs", category: "productivity" },
+    { quote: "Focus on being productive instead of busy.", author: "Tim Ferriss", category: "productivity" },
+    { quote: "It’s not at all that I’m so smart, it’s just that I stay with problems longer.", author: "Albert Einstein", category: "motivation" },
+    { quote: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein", category: "motivation" }
+  ];
+
+  const pool = input?.category === "custom" ? customQuotes : [...defaultQuotes, ...customQuotes];
+  if (pool.length === 0) return defaultQuotes[0];
+
+  const filtered = input?.category && input.category !== "custom"
+    ? pool.filter(q => q.category === input.category)
+    : pool;
+
+  const finalPool = filtered.length > 0 ? filtered : pool;
+  return finalPool[Math.floor(Math.random() * finalPool.length)];
+}
+
+export async function saveQuote(input: { quote: string, author: string, category: string }) {
+  const customQuotes = await redis.get<any[]>(QUOTES_KEY) || [];
+  const newQuote = { ...input, id: `q_${Date.now()}` };
+  await redis.set(QUOTES_KEY, [newQuote, ...customQuotes]);
+  return newQuote;
 }
 
 export async function startPomodoroSession(input: any) {
@@ -207,4 +232,29 @@ export async function togglePracticedRule(input: { ruleId: number }) {
 export async function getPomodoroStats(input: any) {
   const sessions = await redis.get(`${POMODORO_KEY_PREFIX}:today`) || 0;
   return { totalSessions: Number(sessions) };
+}
+
+export async function seedProductivityData() {
+  const habits: Habit[] = [
+    { id: "h1", name: "Deep Work (2h)", category: "Code", streak: 5, completedToday: false },
+    { id: "h2", name: "Read Technical Book", category: "Learn", streak: 3, completedToday: false },
+    { id: "h3", name: "Morning Run", category: "Health", streak: 7, completedToday: false },
+    { id: "h4", name: "Plan Tomorrow", category: "Review", streak: 10, completedToday: false },
+    { id: "h5", name: "Review Code Snippets", category: "Code", streak: 2, completedToday: false }
+  ];
+
+  const links = [
+    { id: "l1", title: "Next.js Documentation", url: "https://nextjs.org/docs", tags: ["dev", "nextjs"], savedAt: new Date().toISOString() },
+    { id: "l2", title: "Upstash Redis", url: "https://upstash.com", tags: ["db", "redis"], savedAt: new Date().toISOString() }
+  ];
+
+  await redis.set(HABITS_KEY_PREFIX, habits);
+  await redis.set(LINKS_KEY_PREFIX, links);
+  await redis.del(DISTRACTIONS_KEY);
+  await redis.del(SNIPPETS_KEY);
+  await redis.del(ENERGY_KEY);
+  await redis.del(REVIEW_KEY);
+  await redis.del(QUOTES_KEY);
+
+  return { success: true };
 }

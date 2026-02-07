@@ -51,6 +51,8 @@ import {
   getWeeklyReviews,
   getPracticedRules,
   togglePracticedRule,
+  saveQuote,
+  seedProductivityData,
 } from "@/services/productivity-service";
 
 export const tools: TamboTool[] = [
@@ -179,6 +181,20 @@ export const tools: TamboTool[] = [
     description: "Mark a Slow Productivity principle as practiced or not.",
     tool: togglePracticedRule,
     inputSchema: z.object({ ruleId: z.number() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "saveQuote",
+    description: "Save a new inspirational quote.",
+    tool: saveQuote,
+    inputSchema: z.object({ quote: z.string(), author: z.string(), category: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "seedProductivityData",
+    description: "Seed the database with example habits and data for a guest user.",
+    tool: seedProductivityData,
+    inputSchema: z.object({}),
     outputSchema: z.any(),
   },
 ];

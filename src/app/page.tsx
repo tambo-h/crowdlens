@@ -39,7 +39,7 @@ import { StyledEnergyMapper } from "@/components/productivity/creative/energy-ma
 import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-review/styled-review";
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh } = useProductivity();
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -89,7 +89,19 @@ function HomeContent() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={async () => {
+              const { seedProductivityData } = await import("@/services/productivity-service");
+              await seedProductivityData();
+              triggerCreativeRefresh();
+              alert("Guest data seeded! Habits, links, and rules reset.");
+            }}
+            className="w-full py-2 px-3 rounded-lg border border-dashed border-primary/30 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
+          >
+            🌱 Seed Guest Data
+          </button>
+
           <ApiKeyCheck>
             <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
               <div className="flex items-center justify-between mb-2">
@@ -178,7 +190,7 @@ const TamboProviderWithContext = () => {
   const { triggerCreativeRefresh } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
-    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveHabit", "saveLink", "togglePracticedRule"].includes(t.name)) {
+    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveHabit", "saveLink", "togglePracticedRule", "saveQuote", "seedProductivityData"].includes(t.name)) {
       return {
         ...t,
         tool: async (...args: any[]) => {

@@ -13,7 +13,7 @@ export interface DistractionJournalRootProps {
 
 export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, DistractionJournalRootProps>(
     ({ children, asChild, initialDistractions = [], ...props }, ref) => {
-        const { creativeRefreshTrigger } = useProductivity();
+        const { creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
         const [distractions, setDistractions] = React.useState<Distraction[]>(initialDistractions);
         const [isLoading, setIsLoading] = React.useState(false);
 
@@ -45,6 +45,7 @@ export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, Distracti
                     timestamp: result.timestamp,
                 };
                 setDistractions((prev) => [newDistraction, ...prev]);
+                triggerCreativeRefresh();
             } catch (error) {
                 console.error("Failed to log distraction:", error);
             } finally {

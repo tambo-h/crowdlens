@@ -15,6 +15,13 @@ export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRoo
         const [energyData, setEnergyData] = React.useState<EnergyLevel[]>(initialEnergyData);
         const [isLoading, setIsLoading] = React.useState(false);
 
+        // Sync with prop changes
+        React.useEffect(() => {
+            if (initialEnergyData) {
+                setEnergyData(initialEnergyData);
+            }
+        }, [initialEnergyData]);
+
         const logEnergy = async (level: number, notes?: string) => {
             setIsLoading(true);
             try {

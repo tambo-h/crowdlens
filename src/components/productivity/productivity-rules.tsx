@@ -6,7 +6,7 @@
 "use client";
 
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { theme } from "@/lib/theme";
 
 export const productivityRulesSchema = z.object({
@@ -22,6 +22,13 @@ export function ProductivityRules({
 }: ProductivityRulesProps) {
   const [practiced, setPracticed] = useState<number[]>(practicedRules);
   const [expandedRule, setExpandedRule] = useState<number | null>(null);
+
+  // Sync with prop updates
+  useEffect(() => {
+    if (practicedRules) {
+      setPracticed(practicedRules);
+    }
+  }, [practicedRules]);
 
   const togglePracticed = (ruleId: number) => {
     setPracticed((prev) =>
@@ -71,11 +78,10 @@ export function ProductivityRules({
           return (
             <div
               key={rule.id}
-              className={`rounded-lg border-2 transition-all ${
-                isPracticed
-                  ? "bg-primary/5 border-primary/30"
-                  : "bg-muted/30 border-border"
-              }`}
+              className={`rounded-lg border-2 transition-all ${isPracticed
+                ? "bg-primary/5 border-primary/30"
+                : "bg-muted/30 border-border"
+                }`}
             >
               {/* Rule Header */}
               <div
@@ -85,11 +91,10 @@ export function ProductivityRules({
                 <div className="flex items-start gap-4">
                   {/* Number Badge */}
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${
-                      isPracticed
-                        ? "bg-primary text-white"
-                        : "bg-primary/20 text-primary"
-                    }`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${isPracticed
+                      ? "bg-primary text-white"
+                      : "bg-primary/20 text-primary"
+                      }`}
                   >
                     {rule.id}
                   </div>
@@ -149,11 +154,10 @@ export function ProductivityRules({
                           e.stopPropagation();
                           togglePracticed(rule.id);
                         }}
-                        className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
-                          isPracticed
-                            ? "bg-primary text-white hover:bg-primary/90"
-                            : "bg-primary/10 text-primary hover:bg-primary/20"
-                        }`}
+                        className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${isPracticed
+                          ? "bg-primary text-white hover:bg-primary/90"
+                          : "bg-primary/10 text-primary hover:bg-primary/20"
+                          }`}
                       >
                         {isPracticed ? "✓ Practiced" : "Mark as Practiced"}
                       </button>

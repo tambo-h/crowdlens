@@ -6,7 +6,7 @@
 "use client";
 
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const inspirationQuoteSchema = z.object({
   quote: z.string().describe("The inspirational quote text"),
@@ -24,6 +24,11 @@ export function InspirationQuote({
   isFavorite = false,
 }: InspirationQuoteProps) {
   const [favorite, setFavorite] = useState(isFavorite);
+
+  // Sync with prop updates
+  useEffect(() => {
+    setFavorite(isFavorite);
+  }, [isFavorite]);
 
   return (
     <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl p-8 shadow-lg border border-primary/20 max-w-2xl">

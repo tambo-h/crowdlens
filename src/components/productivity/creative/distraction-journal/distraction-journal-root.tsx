@@ -15,6 +15,13 @@ export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, Distracti
         const [distractions, setDistractions] = React.useState<Distraction[]>(initialDistractions);
         const [isLoading, setIsLoading] = React.useState(false);
 
+        // Sync with prop changes
+        React.useEffect(() => {
+            if (initialDistractions) {
+                setDistractions(initialDistractions);
+            }
+        }, [initialDistractions]);
+
         const addDistraction = async (description: string, durationMinutes: number, category?: string) => {
             setIsLoading(true);
             try {

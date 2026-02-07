@@ -15,6 +15,13 @@ export const StandupLogRoot = React.forwardRef<HTMLDivElement, StandupLogRootPro
         const [entries, setEntries] = React.useState<StandupEntry[]>(initialEntries);
         const [isLoading, setIsLoading] = React.useState(false);
 
+        // Sync with prop changes
+        React.useEffect(() => {
+            if (initialEntries) {
+                setEntries(initialEntries);
+            }
+        }, [initialEntries]);
+
         const saveEntry = async (yesterday: string, today: string, blockers: string) => {
             setIsLoading(true);
             try {

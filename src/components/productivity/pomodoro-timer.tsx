@@ -25,15 +25,27 @@ export function PomodoroTimer({
   autoStart = false,
   projectName,
 }: PomodoroTimerProps) {
+  // Use props for initial state, but we'll also sync them in useEffect
   const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessionType, setSessionType] = useState<"work" | "break" | "longBreak">("work");
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
 
-  const totalSeconds = 
+  // Sync state with props changes (important for streaming generative props)
+  useEffect(() => {
+    if (!isRunning) {
+      const newTime =
+        sessionType === "work" ? workDuration * 60 :
+          sessionType === "break" ? breakDuration * 60 :
+            longBreakDuration * 60;
+      setTimeLeft(newTime);
+    }
+  }, [workDuration, breakDuration, longBreakDuration, sessionType, isRunning]);
+
+  const totalSeconds =
     sessionType === "work" ? workDuration * 60 :
-    sessionType === "break" ? breakDuration * 60 :
-    longBreakDuration * 60;
+      sessionType === "break" ? breakDuration * 60 :
+        longBreakDuration * 60;
 
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
@@ -49,12 +61,13 @@ export function PomodoroTimer({
         setSessionsCompleted((prev) => prev + 1);
         const nextType = (sessionsCompleted + 1) % 4 === 0 ? "longBreak" : "break";
         setSessionType(nextType);
+        // We setTimeLeft here immediately to avoid the sync useEffect jumping back
         setTimeLeft(nextType === "longBreak" ? longBreakDuration * 60 : breakDuration * 60);
       } else {
         setSessionType("work");
         setTimeLeft(workDuration * 60);
       }
-      
+
       if (autoStart) {
         setIsRunning(true);
       } else {
@@ -73,9 +86,9 @@ export function PomodoroTimer({
   const handleStartPause = () => setIsRunning(!isRunning);
   const handleReset = () => {
     setIsRunning(false);
-    setTimeLeft(sessionType === "work" ? workDuration * 60 : 
-                sessionType === "break" ? breakDuration * 60 : 
-                longBreakDuration * 60);
+    setTimeLeft(sessionType === "work" ? workDuration * 60 :
+      sessionType === "break" ? breakDuration * 60 :
+        longBreakDuration * 60);
   };
 
   return (
@@ -92,13 +105,12 @@ export function PomodoroTimer({
 
       {/* Session Type Badge */}
       <div className="flex justify-center mb-6">
-        <span className={`px-4 py-1 rounded-full text-sm font-medium ${
-          sessionType === "work" 
-            ? "bg-primary/20 text-primary border border-primary/30" 
+        <span className={`px-4 py-1 rounded-full text-sm font-medium ${sessionType === "work"
+            ? "bg-primary/20 text-primary border border-primary/30"
             : sessionType === "break"
-            ? "bg-accent/20 text-accent border border-accent/30"
-            : "bg-secondary/20 text-secondary border border-secondary/30"
-        }`}>
+              ? "bg-accent/20 text-accent border border-accent/30"
+              : "bg-secondary/20 text-secondary border border-secondary/30"
+          }`}>
           {sessionType === "work" ? "🎯 Focus Time" : sessionType === "break" ? "☕ Short Break" : "🌟 Long Break"}
         </span>
       </div>
@@ -142,11 +154,10 @@ export function PomodoroTimer({
       <div className="flex gap-3 justify-center mb-6">
         <button
           onClick={handleStartPause}
-          className={`px-6 py-3 rounded-lg font-medium transition-all ${
-            isRunning
+          className={`px-6 py-3 rounded-lg font-medium transition-all ${isRunning
               ? "bg-accent text-accent-foreground hover:opacity-90"
               : "bg-primary text-primary-foreground hover:opacity-90"
-          }`}
+            }`}
         >
           {isRunning ? "⏸ Pause" : "▶ Start"}
         </button>
@@ -167,9 +178,8 @@ export function PomodoroTimer({
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className={`w-3 h-3 rounded-full ${
-                i < sessionsCompleted % 4 ? "bg-primary" : "bg-muted"
-              }`}
+              className={`w-3 h-3 rounded-full ${i < sessionsCompleted % 4 ? "bg-primary" : "bg-muted"
+                }`}
             />
           ))}
         </div>

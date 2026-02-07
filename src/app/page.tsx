@@ -3,11 +3,14 @@
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
 import { ProductivityDashboard } from "@/components/productivity/productivity-dashboard";
 import { PomodoroTimer } from "@/components/productivity/pomodoro-timer";
-import { HabitTracker } from "@/components/productivity/habit-tracker";
+import { InteractableHabitTracker } from "@/components/productivity/habit-tracker";
 import { InspirationQuote } from "@/components/productivity/inspiration-quote";
 import { LinkCard } from "@/components/productivity/link-card";
 import { ProductivityRules } from "@/components/productivity/productivity-rules";
+import { CollapsibleChat } from "@/components/tambo/collapsible-chat";
 import { useState } from "react";
+import { TamboProvider } from "@tambo-ai/react";
+import { components, tools } from "@/lib/tambo";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"dashboard" | "pomodoro" | "habits" | "links" | "inspiration" | "rules">("dashboard");
@@ -29,12 +32,12 @@ export default function Home() {
     },
   };
 
-  const habitsData = [
+  const [habitsData, setHabitsData] = useState([
     { id: "1", name: "Morning Code Review", category: "Code" as const, streak: 12, completedToday: true },
     { id: "2", name: "Read Tech Articles", category: "Learn" as const, streak: 8, completedToday: true },
     { id: "3", name: "30min Exercise", category: "Health" as const, streak: 5, completedToday: false },
     { id: "4", name: "Daily Standup Log", category: "Review" as const, streak: 15, completedToday: false },
-  ];
+  ]);
 
   const linksData = [
     {
@@ -63,138 +66,142 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 space-y-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-primary mb-1">ProductivityFlow</h1>
-          <p className="text-xs text-muted-foreground">Calm Dev Edition</p>
-        </div>
-
-        <nav className="space-y-2">
-          <button
-            onClick={() => setActiveView("dashboard")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "dashboard"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            📊 Dashboard
-          </button>
-          <button
-            onClick={() => setActiveView("pomodoro")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "pomodoro"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            ⏱️ Pomodoro
-          </button>
-          <button
-            onClick={() => setActiveView("habits")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "habits"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            ✅ Habits
-          </button>
-          <button
-            onClick={() => setActiveView("links")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "links"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            🔗 Links
-          </button>
-          <button
-            onClick={() => setActiveView("inspiration")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "inspiration"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            💡 Inspiration
-          </button>
-          <button
-            onClick={() => setActiveView("rules")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-              activeView === "rules"
-                ? "bg-primary text-primary-foreground font-medium"
-                : "text-foreground hover:bg-muted"
-            }`}
-          >
-            📘 Productivity Rules
-          </button>
-        </nav>
-
-        <div className="absolute bottom-6 left-6 right-6 space-y-3">
-          <div className="border-t border-border pt-4">
-            <ApiKeyCheck>
-              <a
-                href="/chat"
-                className="block w-full text-center px-4 py-2 rounded-lg bg-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity text-sm"
-              >
-                💬 AI Chat
-              </a>
-            </ApiKeyCheck>
+    <TamboProvider
+      apiKey={process.env.NEXT_PUBLIC_TAMBO_API_KEY!}
+      components={components}
+      tools={tools}
+      tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
+    >
+      <div className="min-h-screen bg-background">
+        {/* Navigation Sidebar */}
+        <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 space-y-6">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-primary mb-1">ProductivityFlow</h1>
+            <p className="text-xs text-muted-foreground">Calm Dev Edition</p>
           </div>
-          <a
-            href="/theme-test"
-            className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Theme Test
-          </a>
-        </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="ml-64 p-8">
-        <div className="max-w-7xl mx-auto">
-          {activeView === "dashboard" && <ProductivityDashboard {...dashboardData} />}
-          
-          {activeView === "pomodoro" && (
-            <div className="flex justify-center items-center min-h-[80vh]">
-              <PomodoroTimer workDuration={25} breakDuration={5} longBreakDuration={15} autoStart={false} />
+          <nav className="space-y-2">
+            <button
+              onClick={() => setActiveView("dashboard")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "dashboard"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              📊 Dashboard
+            </button>
+            <button
+              onClick={() => setActiveView("pomodoro")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "pomodoro"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              ⏱️ Pomodoro
+            </button>
+            <button
+              onClick={() => setActiveView("habits")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "habits"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              ✅ Habits
+            </button>
+            <button
+              onClick={() => setActiveView("links")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "links"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              🔗 Links
+            </button>
+            <button
+              onClick={() => setActiveView("inspiration")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "inspiration"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              💡 Inspiration
+            </button>
+            <button
+              onClick={() => setActiveView("rules")}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "rules"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              📘 Productivity Rules
+            </button>
+          </nav>
+
+          <div className="absolute bottom-6 left-6 right-6 space-y-3">
+            <div className="border-t border-border pt-4">
+              <ApiKeyCheck>
+                <button
+                  onClick={() => { }} // Could trigger chat open if needed
+                  className="block w-full text-center px-4 py-2 rounded-lg bg-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity text-sm"
+                >
+                  💬 AI Ready
+                </button>
+              </ApiKeyCheck>
             </div>
-          )}
-          
-          {activeView === "habits" && (
-            <div className="flex justify-center items-start pt-12">
-              <HabitTracker habits={habitsData} viewMode="week" />
-            </div>
-          )}
-          
-          {activeView === "links" && (
-            <div className="flex justify-center items-start pt-12">
-              <LinkCard links={linksData} viewMode="cards" />
-            </div>
-          )}
-          
-          {activeView === "inspiration" && (
-            <div className="flex justify-center items-center min-h-[80vh]">
-              <InspirationQuote
-                quote="The best way to predict the future is to invent it."
-                author="Alan Kay"
-                category="technology"
-                isFavorite={false}
-              />
-            </div>
-          )}
-          
-          {activeView === "rules" && (
-            <div className="flex justify-center items-start pt-12">
-              <ProductivityRules showProgress={true} practicedRules={[]} />
-            </div>
-          )}
+            <a
+              href="/theme-test"
+              className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Theme Test
+            </a>
+          </div>
         </div>
+
+        {/* Main Content Area */}
+        <div className="ml-64 p-8">
+          <div className="max-w-7xl mx-auto">
+            {activeView === "dashboard" && <ProductivityDashboard {...dashboardData} />}
+
+            {activeView === "pomodoro" && (
+              <div className="flex justify-center items-center min-h-[80vh]">
+                <PomodoroTimer workDuration={25} breakDuration={5} longBreakDuration={15} autoStart={false} />
+              </div>
+            )}
+
+            {activeView === "habits" && (
+              <div className="flex justify-center items-start pt-12">
+                <InteractableHabitTracker habits={habitsData} viewMode="week" />
+              </div>
+            )}
+
+            {activeView === "links" && (
+              <div className="flex justify-center items-start pt-12">
+                <LinkCard links={linksData} viewMode="cards" />
+              </div>
+            )}
+
+            {activeView === "inspiration" && (
+              <div className="flex justify-center items-center min-h-[80vh]">
+                <InspirationQuote
+                  quote="The best way to predict the future is to invent it."
+                  author="Alan Kay"
+                  category="technology"
+                  isFavorite={false}
+                />
+              </div>
+            )}
+
+            {activeView === "rules" && (
+              <div className="flex justify-center items-start pt-12">
+                <ProductivityRules showProgress={true} practicedRules={[]} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Collapsible Chat */}
+        <CollapsibleChat />
       </div>
-    </div>
+    </TamboProvider>
   );
 }

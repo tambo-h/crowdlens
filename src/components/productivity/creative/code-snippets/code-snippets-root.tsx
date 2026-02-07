@@ -15,6 +15,13 @@ export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRoo
         const [snippets, setSnippets] = React.useState<Snippet[]>(initialSnippets);
         const [isLoading, setIsLoading] = React.useState(false);
 
+        // Sync with prop changes
+        React.useEffect(() => {
+            if (initialSnippets) {
+                setSnippets(initialSnippets);
+            }
+        }, [initialSnippets]);
+
         const saveSnippet = async (title: string, code: string, language: string, tags: string[]) => {
             setIsLoading(true);
             try {

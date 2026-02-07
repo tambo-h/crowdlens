@@ -17,6 +17,13 @@ export const WeeklyReviewRoot = React.forwardRef<HTMLDivElement, WeeklyReviewRoo
         const [reviews, setReviews] = React.useState<WeeklyReview[]>(initialReviews);
         const [isLoading, setIsLoading] = React.useState(false);
 
+        // Sync with prop changes
+        React.useEffect(() => {
+            if (initialReviews) {
+                setReviews(initialReviews);
+            }
+        }, [initialReviews]);
+
         const saveReview = async (accomplishments: string, challenges: string, nextWeekGoals: string, rating: number) => {
             setIsLoading(true);
             try {

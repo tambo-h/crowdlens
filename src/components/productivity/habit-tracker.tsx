@@ -1,12 +1,13 @@
 /**
  * @file habit-tracker.tsx
- * @description Tambo generative component for habit tracking
+ * @description Tambo generative and interactable component for habit tracking
  */
 
 "use client";
 
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { withInteractable } from "@tambo-ai/react";
 
 export const habitTrackerSchema = z.object({
   habits: z.array(
@@ -17,8 +18,8 @@ export const habitTrackerSchema = z.object({
       streak: z.number(),
       completedToday: z.boolean(),
     })
-  ).describe("List of habits to track"),
-  viewMode: z.enum(["week", "month"]).default("week").describe("Display mode"),
+  ).describe("List of habits to track and manage. You can add new habits here."),
+  viewMode: z.enum(["week", "month"]).default("week").describe("Display mode for the habit tracker"),
 });
 
 type HabitTrackerProps = z.infer<typeof habitTrackerSchema>;
@@ -30,8 +31,15 @@ const categoryColors = {
   Review: "#F9DCC4",
 };
 
-export function HabitTracker({ habits, viewMode = "week" }: HabitTrackerProps) {
-  const [localHabits, setLocalHabits] = useState(habits);
+export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerProps) {
+  const [localHabits, setLocalHabits] = useState(habits || []);
+
+  // Sync with prop changes (important for AI updates in Interactable mode)
+  useEffect(() => {
+    if (habits) {
+      setLocalHabits(habits);
+    }
+  }, [habits]);
 
   const toggleHabit = (habitId: string) => {
     setLocalHabits(prev =>
@@ -41,20 +49,29 @@ export function HabitTracker({ habits, viewMode = "week" }: HabitTrackerProps) {
     );
   };
 
+  if (!localHabits || localHabits.length === 0) {
+    return (
+      <div className="bg-card rounded-xl p-6 shadow-lg border border-border max-w-2xl w-full text-center py-12">
+        <h2 className="text-2xl font-bold text-foreground mb-4">Habit Tracker</h2>
+        <span className="text-6xl block mb-4">🏆</span>
+        <p className="text-muted-foreground">No habits tracked yet.</p>
+        <p className="text-sm text-muted-foreground mt-1">Add habits to start your journey!</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-card rounded-xl p-6 shadow-lg border border-border max-w-2xl">
+    <div className="bg-card rounded-xl p-6 shadow-lg border border-border max-w-2xl w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">Habit Tracker</h2>
         <div className="flex gap-2 text-xs">
-          <span className={`px-3 py-1 rounded-md font-medium cursor-pointer ${
-            viewMode === "week" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-          }`}>
+          <span className={`px-3 py-1 rounded-md font-medium cursor-pointer ${viewMode === "week" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            }`}>
             Week
           </span>
-          <span className={`px-3 py-1 rounded-md font-medium cursor-pointer ${
-            viewMode === "month" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-          }`}>
+          <span className={`px-3 py-1 rounded-md font-medium cursor-pointer ${viewMode === "month" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            }`}>
             Month
           </span>
         </div>
@@ -72,11 +89,10 @@ export function HabitTracker({ habits, viewMode = "week" }: HabitTrackerProps) {
                 {/* Checkbox */}
                 <button
                   onClick={() => toggleHabit(habit.id)}
-                  className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-                    habit.completedToday
+                  className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${habit.completedToday
                       ? "bg-primary border-primary"
                       : "border-border hover:border-primary/50"
-                  }`}
+                    }`}
                 >
                   {habit.completedToday && <span className="text-white text-sm">✓</span>}
                 </button>
@@ -90,9 +106,9 @@ export function HabitTracker({ habits, viewMode = "week" }: HabitTrackerProps) {
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{
-                        backgroundColor: `${categoryColors[habit.category]}20`,
-                        color: categoryColors[habit.category],
-                        border: `1px solid ${categoryColors[habit.category]}40`,
+                        backgroundColor: `${categoryColors[habit.category] || "#ccc"}20`,
+                        color: categoryColors[habit.category] || "#666",
+                        border: `1px solid ${categoryColors[habit.category] || "#999"}40`,
                       }}
                     >
                       {habit.category}
@@ -128,3 +144,9 @@ export function HabitTracker({ habits, viewMode = "week" }: HabitTrackerProps) {
     </div>
   );
 }
+
+export const InteractableHabitTracker = withInteractable(HabitTracker, {
+  componentName: "HabitTracker",
+  description: "Displays and manages user habits. AI can add, remove, or modify habits in this list.",
+  propsSchema: habitTrackerSchema,
+});

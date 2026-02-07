@@ -1,131 +1,105 @@
-# Tambo Template
+# CrowdLens
 
-This is a starter NextJS app with Tambo hooked up to get your AI app development started quickly.
+CrowdLens is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, habits, links, weekly review, etc.) with an AI side panel that can call server-side tools and render interactive UI components.
 
-## Get Started
+## What’s in the app
 
-1. Run `npm create-tambo@latest my-tambo-app` for a new project
+- **Dashboard**: daily overview (Pomodoro count, habit completion, streaks, recent links)
+- **Pomodoro timer**: sessions tracked in Redis
+- **Habits**: toggle completion + streak tracking
+- **Links**: save / tag / browse useful links
+- **Slow Productivity rules**: built-in reference
+- **Creative tools**: distractions journal, code snippets, standup log, energy mapper, weekly review
+- **AI side panel**: Tambo chat that can use the registered tools/components
 
-2. `npm install`
+## Quickstart
 
-3. `npx tambo init`
+### Prereqs
 
-- or rename `example.env.local` to `.env.local` and add your tambo API key you can get for free [here](https://tambo.co/dashboard).
+- Node.js (this repo uses `npm` via `package-lock.json`)
+- A **Tambo** API key (set as `NEXT_PUBLIC_TAMBO_API_KEY`)
+- **Upstash Redis** credentials
 
-4. Run `npm run dev` and go to `localhost:3000` to use the app!
-
-## Customizing
-
-### Change what components tambo can control
-
-You can see how components are registered with tambo in `src/lib/tambo.ts`:
-
-```tsx
-export const components: TamboComponent[] = [
-  {
-    name: "Graph",
-    description:
-      "A component that renders various types of charts (bar, line, pie) using Recharts. Supports customizable data visualization with labels, datasets, and styling options.",
-    component: Graph,
-    propsSchema: graphSchema,
-  },
-  // Add more components here
-];
-```
-
-You can install the graph component into any project with:
+### 1) Install dependencies
 
 ```bash
-npx tambo add graph
+npm install
 ```
 
-The example Graph component demonstrates several key features:
+### 2) Configure environment
 
-- Different prop types (strings, arrays, enums, nested objects)
-- Multiple chart types (bar, line, pie)
-- Customizable styling (variants, sizes)
-- Optional configurations (title, legend, colors)
-- Data visualization capabilities
+Create `.env.local` (you can start from `example.env.local`) and set:
 
-Update the `components` array with any component(s) you want tambo to be able to use in a response!
+```bash
+# Tambo
+NEXT_PUBLIC_TAMBO_API_KEY=...
 
-You can find more information about the options [here](https://docs.tambo.co/concepts/generative-interfaces/generative-components)
+# Optional: only needed if you’re running the Tambo API server yourself
+NEXT_PUBLIC_TAMBO_URL=
 
-### Add tools for tambo to use
-
-Tools are defined with `inputSchema` and `outputSchema`:
-
-```tsx
-export const tools: TamboTool[] = [
-  {
-    name: "globalPopulation",
-    description:
-      "A tool to get global population trends with optional year range filtering",
-    tool: getGlobalPopulationTrend,
-    inputSchema: z.object({
-      startYear: z.number().optional(),
-      endYear: z.number().optional(),
-    }),
-    outputSchema: z.array(
-      z.object({
-        year: z.number(),
-        population: z.number(),
-        growthRate: z.number(),
-      }),
-    ),
-  },
-];
+# Upstash Redis (required for the productivity tools)
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-Find more information about tools [here.](https://docs.tambo.co/concepts/tools)
+Notes:
 
-### The Magic of Tambo Requires the TamboProvider
+- You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
+- The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
+- `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
-Make sure in the TamboProvider wrapped around your app:
+### 3) Run the dev server
 
-```tsx
-...
-<TamboProvider
-  apiKey={process.env.NEXT_PUBLIC_TAMBO_API_KEY!}
-  components={components} // Array of components to control
-  tools={tools} // Array of tools it can use
->
-  {children}
-</TamboProvider>
+```bash
+npm run dev
 ```
 
-In this example we do this in the `Layout.tsx` file, but you can do it anywhere in your app that is a client component.
+Open http://localhost:3000.
 
-### Voice input
+## Useful routes
 
-The template includes a `DictationButton` component using the `useTamboVoice` hook for speech-to-text input.
+- `/` — main CrowdLens UI (dashboard + AI side panel)
+- `/chat` — full-screen Tambo chat
+- `/interactables` — Tambo UI primitives playground
+- `/api/test-redis` — sanity check Upstash Redis connectivity; useful if the dashboard widgets don’t seem to persist data
 
-### MCP (Model Context Protocol)
+## How Tambo is wired up
 
-The template includes MCP support for connecting to external tools and resources. You can use the MCP hooks from `@tambo-ai/react/mcp`:
+Tambo is configured in `src/lib/tambo.ts`:
 
-- `useTamboMcpPromptList` - List available prompts from MCP servers
-- `useTamboMcpPrompt` - Get a specific prompt
-- `useTamboMcpResourceList` - List available resources
+- `components`: React components that the model can render (Pomodoro timer, habit tracker, weekly review, etc.)
+- `tools`: server-side functions the model can call (read/write habits, save links, log distractions, …)
 
-See `src/components/tambo/mcp-components.tsx` for example usage.
+See the `components` and `tools` arrays in `src/lib/tambo.ts` for the current configuration.
 
-### Change where component responses are shown
+At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/chat` and `/interactables`).
 
-The components used by tambo are shown alongside the message response from tambo within the chat thread, but you can have the result components show wherever you like by accessing the latest thread message's `renderedComponent` field:
+### Adding a new tool
 
-```tsx
-const { thread } = useTambo();
-const latestComponent =
-  thread?.messages[thread.messages.length - 1]?.renderedComponent;
+1. Implement a server action (or other server-side function) in `src/services/*`
+2. Register it in `tools` in `src/lib/tambo.ts` with `inputSchema` + `outputSchema` (Zod)
 
-return (
-  <div>
-    {latestComponent && (
-      <div className="my-custom-wrapper">{latestComponent}</div>
-    )}
-  </div>
-);
+### Adding a new component
+
+1. Create a component under `src/components/*` and a Zod props schema
+2. Register it in `components` in `src/lib/tambo.ts`
+
+## Project notes / known limitations
+
+- The current Redis keying in `src/services/productivity-service.ts` is hard-coded to a placeholder user (`user_1`).
+- In non-local environments, this means all users share the same data; don’t deploy this as-is to production without adding proper auth and per-user keying.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
 ```
 
-For more detailed documentation, visit [Tambo's official docs](https://docs.tambo.co).
+## Further reading
+
+- Tambo docs: https://docs.tambo.co
+- Upstash Redis docs: https://upstash.com/docs/redis
+- Project docs in this repo: `IMPLEMENTATION_PLAN.md`, `PHASE_1_COMPLETE.md`

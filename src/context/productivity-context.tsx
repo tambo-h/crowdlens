@@ -82,7 +82,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         refreshHabits();
-    }, [refreshHabits]);
+    }, [refreshHabits, creativeRefreshTrigger]);
 
     const toggleHabitAction = async (habitId: string) => {
         // Optimistic update
@@ -102,33 +102,39 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     };
 
-    const startPomodoro = (props: Partial<PomodoroState>) => {
+    const startPomodoro = useCallback((props: Partial<PomodoroState>) => {
         setPomodoro(prev => ({
             ...prev,
             ...props,
             timeLeft: props.workDuration ? props.workDuration * 60 : prev.timeLeft,
             isRunning: true
         }));
-    };
+    }, []);
 
-    const pausePomodoro = () => setPomodoro(prev => ({ ...prev, isRunning: false }));
+    const pausePomodoro = useCallback(() => setPomodoro(prev => ({ ...prev, isRunning: false })), []);
 
-    const resetPomodoro = () => setPomodoro(prev => ({
+    const resetPomodoro = useCallback(() => setPomodoro(prev => ({
         ...prev,
         isRunning: false,
         timeLeft: prev.workDuration * 60,
         sessionType: "work"
-    }));
+    })), []);
 
-    const updatePomodoroDurations = (work: number, breakD: number, long: number) => {
-        setPomodoro(prev => ({
-            ...prev,
-            workDuration: work,
-            breakDuration: breakD,
-            longBreakDuration: long,
-            timeLeft: prev.isRunning ? prev.timeLeft : work * 60
-        }));
-    };
+    const updatePomodoroDurations = useCallback((work: number, breakD: number, long: number) => {
+        setPomodoro(prev => {
+            // Only update if values changed to prevent unnecessary re-renders
+            if (prev.workDuration === work && prev.breakDuration === breakD && prev.longBreakDuration === long) {
+                return prev;
+            }
+            return {
+                ...prev,
+                workDuration: work,
+                breakDuration: breakD,
+                longBreakDuration: long,
+                timeLeft: prev.isRunning ? prev.timeLeft : work * 60
+            };
+        });
+    }, []);
 
     const tickPomodoro = useCallback(() => {
         setPomodoro(prev => {

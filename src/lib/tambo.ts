@@ -37,6 +37,7 @@ import {
   getPomodoroStats,
   startPomodoroSession,
   toggleHabit,
+  saveHabit,
   saveLink,
   logDistraction,
   getDistractions,
@@ -107,6 +108,13 @@ export const tools: TamboTool[] = [
     description: "Mark a habit as complete or incomplete.",
     tool: toggleHabit,
     inputSchema: z.object({ habitId: z.string(), completed: z.boolean() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "saveHabit",
+    description: "Create a new habit to track.",
+    tool: saveHabit,
+    inputSchema: z.object({ name: z.string(), category: z.enum(["Code", "Learn", "Health", "Review"]) }),
     outputSchema: z.any(),
   },
   {

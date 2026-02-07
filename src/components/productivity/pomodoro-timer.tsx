@@ -22,6 +22,7 @@ import { useProductivity } from "@/context/productivity-context";
 type PomodoroTimerProps = z.input<typeof pomodoroTimerSchema>;
 
 function createPomodoroAudio() {
+  if (typeof window === "undefined") return null;
   const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
   if (!AudioContextCtor) return null;
   return new AudioContextCtor();
@@ -169,7 +170,7 @@ export function PomodoroTimer({
       void playTick();
     }
 
-    if (prevTimeLeft > 0 && timeLeft === 0) {
+    if (prevTimeLeft > 0 && timeLeft === 0 && !isRunning) {
       void playBell();
     }
   }, [isRunning, playBell, playTick, tickingSoundEnabled, timeLeft]);

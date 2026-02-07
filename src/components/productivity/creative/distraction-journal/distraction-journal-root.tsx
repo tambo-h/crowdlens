@@ -1,7 +1,8 @@
 import React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { DistractionJournalContext, Distraction } from "./distraction-journal-context";
-import { logDistraction } from "@/services/productivity-service";
+import { logDistraction, getDistractions } from "@/services/productivity-service";
+import { useProductivity } from "@/context/productivity-context";
 
 export interface DistractionJournalRootProps {
     children: React.ReactNode;
@@ -12,15 +13,25 @@ export interface DistractionJournalRootProps {
 
 export const DistractionJournalRoot = React.forwardRef<HTMLDivElement, DistractionJournalRootProps>(
     ({ children, asChild, initialDistractions = [], ...props }, ref) => {
+        const { creativeRefreshTrigger } = useProductivity();
         const [distractions, setDistractions] = React.useState<Distraction[]>(initialDistractions);
         const [isLoading, setIsLoading] = React.useState(false);
 
-        // Sync with prop changes
+        // Initial fetch
         React.useEffect(() => {
-            if (initialDistractions) {
-                setDistractions(initialDistractions);
-            }
-        }, [initialDistractions]);
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const data = await getDistractions({});
+                    setDistractions(data);
+                } catch (error) {
+                    console.error("Failed to fetch distractions:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }, [creativeRefreshTrigger]);
 
         const addDistraction = async (description: string, durationMinutes: number, category?: string) => {
             setIsLoading(true);

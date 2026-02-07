@@ -1,7 +1,8 @@
 import React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { CodeSnippetsContext, Snippet } from "./code-snippets-context";
-import { saveSnippet as saveSnippetService } from "@/services/productivity-service";
+import { saveSnippet as saveSnippetService, getSnippets } from "@/services/productivity-service";
+import { useProductivity } from "@/context/productivity-context";
 
 export interface CodeSnippetsRootProps {
     children: React.ReactNode;
@@ -12,15 +13,25 @@ export interface CodeSnippetsRootProps {
 
 export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRootProps>(
     ({ children, asChild, initialSnippets = [], ...props }, ref) => {
+        const { creativeRefreshTrigger } = useProductivity();
         const [snippets, setSnippets] = React.useState<Snippet[]>(initialSnippets);
         const [isLoading, setIsLoading] = React.useState(false);
 
-        // Sync with prop changes
+        // Initial fetch
         React.useEffect(() => {
-            if (initialSnippets) {
-                setSnippets(initialSnippets);
-            }
-        }, [initialSnippets]);
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const data = await getSnippets({});
+                    setSnippets(data);
+                } catch (error) {
+                    console.error("Failed to fetch snippets:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }, [creativeRefreshTrigger]);
 
         const saveSnippet = async (title: string, code: string, language: string, tags: string[]) => {
             setIsLoading(true);

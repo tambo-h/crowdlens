@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Activity, Battery, BatteryMedium, BatteryLow, BatteryFull, TrendingUp, Info } from "lucide-react";
 import { format } from "date-fns";
 import { useEnergyMapperContext } from "./energy-mapper-context";
+import { cn } from "@/lib/utils";
 
 export const energyMapperSchema = z.object({
     initialEnergyData: z.array(z.any()).optional(),
@@ -109,16 +110,21 @@ const MapperInner = () => {
             <div className="space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">Daily Logs</h3>
                 <EnergyMapper.Items>
-                    {({ items }) => (
+                    {({ items }: { items: EnergyLevel[] }) => (
                         <div className="space-y-3">
                             {items.length === 0 ? (
                                 <div className="text-center py-10 text-muted-foreground bg-muted/5 rounded-2xl border border-dashed border-muted">
                                     No energy logs today.
                                 </div>
                             ) : (
-                                items.map((item) => (
+                                items.map((item: EnergyLevel) => (
                                     <div key={item.id} className="bg-card rounded-xl p-4 border border-border shadow-sm flex items-center gap-4 hover:border-primary/20 transition-all">
-                                        <div className={`w-12 h-12 flex items-center justify-center rounded-full text-lg font-bold border-2 ${getLevelColor(item.level).replace('bg-', 'bg-opacity-50 ')}`}>
+                                        <div className={cn(
+                                            "w-12 h-12 flex items-center justify-center rounded-full text-lg font-bold border-2",
+                                            item.level <= 3 ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                                item.level <= 7 ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" :
+                                                    "bg-primary/10 text-primary border-primary/20"
+                                        )}>
                                             {item.level}
                                         </div>
                                         <div className="flex-1 min-w-0">

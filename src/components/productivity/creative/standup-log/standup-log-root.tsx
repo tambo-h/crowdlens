@@ -1,7 +1,8 @@
 import React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { StandupLogContext, StandupEntry } from "./standup-log-context";
-import { saveStandupEntry as saveStandupService } from "@/services/productivity-service";
+import { saveStandupEntry as saveStandupService, getStandupHistory } from "@/services/productivity-service";
+import { useProductivity } from "@/context/productivity-context";
 
 export interface StandupLogRootProps {
     children: React.ReactNode;
@@ -12,15 +13,25 @@ export interface StandupLogRootProps {
 
 export const StandupLogRoot = React.forwardRef<HTMLDivElement, StandupLogRootProps>(
     ({ children, asChild, initialEntries = [], ...props }, ref) => {
+        const { creativeRefreshTrigger } = useProductivity();
         const [entries, setEntries] = React.useState<StandupEntry[]>(initialEntries);
         const [isLoading, setIsLoading] = React.useState(false);
 
-        // Sync with prop changes
+        // Initial fetch
         React.useEffect(() => {
-            if (initialEntries) {
-                setEntries(initialEntries);
-            }
-        }, [initialEntries]);
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const history = await getStandupHistory({});
+                    setEntries(history);
+                } catch (error) {
+                    console.error("Failed to fetch standup history:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }, [creativeRefreshTrigger]);
 
         const saveEntry = async (yesterday: string, today: string, blockers: string) => {
             setIsLoading(true);

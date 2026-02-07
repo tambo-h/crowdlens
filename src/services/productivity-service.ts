@@ -11,6 +11,11 @@ import { z } from "zod";
 const HABITS_KEY_PREFIX = "habits:user_1";
 const LINKS_KEY_PREFIX = "links:user_1";
 const POMODORO_KEY_PREFIX = "pomodoro:user_1";
+const DISTRACTIONS_KEY = "distractions:user_1";
+const SNIPPETS_KEY = "snippets:user_1";
+const STANDUP_KEY = "standup:user_1";
+const ENERGY_KEY = "energy:user_1";
+const REVIEW_KEY = "review:user_1";
 
 export interface Habit {
   id: string;
@@ -127,14 +132,62 @@ export async function startPomodoroSession(input: any) {
   return { success: true };
 }
 
-export async function logDistraction(input: any) { return { id: `d_${Date.now()}`, timestamp: new Date().toISOString() }; }
-export async function getDistractions(input: any) { return []; }
-export async function saveSnippet(input: any) { return { id: `s_${Date.now()}`, savedAt: new Date().toISOString() }; }
-export async function getSnippets(input: any) { return []; }
-export async function saveStandupEntry(input: any) { return { id: `st_${Date.now()}`, date: new Date().toISOString() }; }
-export async function getStandupHistory(input: any) { return []; }
-export async function logEnergyLevel(input: any) { return { id: `e_${Date.now()}`, timestamp: new Date().toISOString() }; }
-export async function getEnergyData(input: any) { return []; }
-export async function saveWeeklyReview(input: any) { return { id: `w_${Date.now()}`, date: new Date().toISOString() }; }
-export async function getWeeklyReviews(input: any) { return []; }
-export async function getPomodoroStats(input: any) { return { totalSessions: 0 }; }
+export async function logDistraction(input: { description: string, durationMinutes: number, category?: string }) {
+  const items = await redis.get<any[]>(DISTRACTIONS_KEY) || [];
+  const newItem = { ...input, id: `d_${Date.now()}`, timestamp: new Date().toISOString() };
+  await redis.set(DISTRACTIONS_KEY, [newItem, ...items]);
+  return newItem;
+}
+
+export async function getDistractions(input: any) {
+  return await redis.get<any[]>(DISTRACTIONS_KEY) || [];
+}
+
+export async function saveSnippet(input: { title: string, code: string, language: string, tags?: string[] }) {
+  const items = await redis.get<any[]>(SNIPPETS_KEY) || [];
+  const newItem = { ...input, id: `s_${Date.now()}`, savedAt: new Date().toISOString() };
+  await redis.set(SNIPPETS_KEY, [newItem, ...items]);
+  return newItem;
+}
+
+export async function getSnippets(input: any) {
+  return await redis.get<any[]>(SNIPPETS_KEY) || [];
+}
+
+export async function saveStandupEntry(input: { today: string, yesterday: string, blockers: string }) {
+  const items = await redis.get<any[]>(STANDUP_KEY) || [];
+  const newItem = { ...input, id: `st_${Date.now()}`, date: new Date().toISOString() };
+  await redis.set(STANDUP_KEY, [newItem, ...items]);
+  return newItem;
+}
+
+export async function getStandupHistory(input: any) {
+  return await redis.get<any[]>(STANDUP_KEY) || [];
+}
+
+export async function logEnergyLevel(input: { level: number, notes?: string }) {
+  const items = await redis.get<any[]>(ENERGY_KEY) || [];
+  const newItem = { ...input, id: `e_${Date.now()}`, timestamp: new Date().toISOString() };
+  await redis.set(ENERGY_KEY, [newItem, ...items]);
+  return newItem;
+}
+
+export async function getEnergyData(input: any) {
+  return await redis.get<any[]>(ENERGY_KEY) || [];
+}
+
+export async function saveWeeklyReview(input: { accomplishments: string, challenges: string, nextWeekGoals: string, rating: number }) {
+  const items = await redis.get<any[]>(REVIEW_KEY) || [];
+  const newItem = { ...input, id: `w_${Date.now()}`, date: new Date().toISOString() };
+  await redis.set(REVIEW_KEY, [newItem, ...items]);
+  return newItem;
+}
+
+export async function getWeeklyReviews(input: any) {
+  return await redis.get<any[]>(REVIEW_KEY) || [];
+}
+
+export async function getPomodoroStats(input: any) {
+  const sessions = await redis.get(`${POMODORO_KEY_PREFIX}:today`) || 0;
+  return { totalSessions: Number(sessions) };
+}

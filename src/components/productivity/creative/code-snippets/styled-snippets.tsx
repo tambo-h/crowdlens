@@ -117,14 +117,14 @@ const SnippetInner = () => {
 
             <div className="space-y-4">
                 <CodeSnippets.Items>
-                    {({ items }) => (
+                    {({ items }: { items: Snippet[] }) => (
                         <div className="grid gap-4">
                             {items.length === 0 && !isAdding ? (
                                 <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-xl border-2 border-dashed border-muted/50">
                                     No snippets saved yet.
                                 </div>
                             ) : (
-                                items.map((item) => (
+                                items.map((item: Snippet) => (
                                     <div key={item.id} className="bg-card rounded-xl border border-border shadow-sm overflow-hidden group hover:border-primary/30 transition-all">
                                         <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/10">
                                             <div className="flex items-center gap-2">
@@ -142,13 +142,13 @@ const SnippetInner = () => {
                                             </button>
                                         </div>
                                         <div className="p-4 bg-background/50 relative">
-                                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre text-text-secondary pr-8">
+                                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre text-muted-foreground pr-8">
                                                 {item.code}
                                             </pre>
                                         </div>
                                         {item.tags.length > 0 && (
                                             <div className="px-4 py-2 border-t border-border flex items-center gap-2 flex-wrap">
-                                                {item.tags.map(tag => (
+                                                {item.tags.map((tag: string) => (
                                                     <span key={tag} className="text-[10px] flex items-center gap-1 text-muted-foreground">
                                                         <Tag className="w-3 h-3" />
                                                         {tag}

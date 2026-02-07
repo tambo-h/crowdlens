@@ -3,7 +3,8 @@ import { Slot } from "@radix-ui/react-slot";
 import { WeeklyReviewContext, WeeklyReview } from "./weekly-review-context";
 
 // We'll add saveWeeklyReview to productivity-service.ts next
-import { saveWeeklyReview } from "@/services/productivity-service";
+import { saveWeeklyReview, getWeeklyReviews } from "@/services/productivity-service";
+import { useProductivity } from "@/context/productivity-context";
 
 export interface WeeklyReviewRootProps {
     children: React.ReactNode;
@@ -14,15 +15,25 @@ export interface WeeklyReviewRootProps {
 
 export const WeeklyReviewRoot = React.forwardRef<HTMLDivElement, WeeklyReviewRootProps>(
     ({ children, asChild, initialReviews = [], ...props }, ref) => {
+        const { creativeRefreshTrigger } = useProductivity();
         const [reviews, setReviews] = React.useState<WeeklyReview[]>(initialReviews);
         const [isLoading, setIsLoading] = React.useState(false);
 
-        // Sync with prop changes
+        // Initial fetch
         React.useEffect(() => {
-            if (initialReviews) {
-                setReviews(initialReviews);
-            }
-        }, [initialReviews]);
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const history = await getWeeklyReviews({});
+                    setReviews(history);
+                } catch (error) {
+                    console.error("Failed to fetch weekly reviews:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }, [creativeRefreshTrigger]);
 
         const saveReview = async (accomplishments: string, challenges: string, nextWeekGoals: string, rating: number) => {
             setIsLoading(true);

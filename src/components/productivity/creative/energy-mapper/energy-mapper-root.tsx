@@ -1,7 +1,8 @@
 import React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { EnergyMapperContext, EnergyLevel } from "./energy-mapper-context";
-import { logEnergyLevel as logEnergyService } from "@/services/productivity-service";
+import { logEnergyLevel as logEnergyService, getEnergyData } from "@/services/productivity-service";
+import { useProductivity } from "@/context/productivity-context";
 
 export interface EnergyMapperRootProps {
     children: React.ReactNode;
@@ -12,15 +13,25 @@ export interface EnergyMapperRootProps {
 
 export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRootProps>(
     ({ children, asChild, initialEnergyData = [], ...props }, ref) => {
+        const { creativeRefreshTrigger } = useProductivity();
         const [energyData, setEnergyData] = React.useState<EnergyLevel[]>(initialEnergyData);
         const [isLoading, setIsLoading] = React.useState(false);
 
-        // Sync with prop changes
+        // Initial fetch
         React.useEffect(() => {
-            if (initialEnergyData) {
-                setEnergyData(initialEnergyData);
-            }
-        }, [initialEnergyData]);
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const data = await getEnergyData({});
+                    setEnergyData(data);
+                } catch (error) {
+                    console.error("Failed to fetch energy data:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }, [creativeRefreshTrigger]);
 
         const logEnergy = async (level: number, notes?: string) => {
             setIsLoading(true);

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
 import { ProductivityDashboard } from "@/components/productivity/productivity-dashboard";
 import { PomodoroTimer } from "@/components/productivity/pomodoro-timer";
@@ -172,17 +174,39 @@ const Sparkles = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function Home() {
+const TamboProviderWithContext = () => {
+  const { triggerCreativeRefresh } = useProductivity();
+
+  const augmentedTools = React.useMemo(() => tools.map(t => {
+    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveLink"].includes(t.name)) {
+      return {
+        ...t,
+        tool: async (...args: any[]) => {
+          const res = await (t.tool as any)(...args);
+          triggerCreativeRefresh();
+          return res;
+        }
+      };
+    }
+    return t;
+  }), [triggerCreativeRefresh]);
+
   return (
     <TamboProvider
       apiKey={process.env.NEXT_PUBLIC_TAMBO_API_KEY!}
       components={components}
-      tools={tools}
+      tools={augmentedTools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      <ProductivityProvider>
-        <HomeContent />
-      </ProductivityProvider>
+      <HomeContent />
     </TamboProvider>
+  );
+};
+
+export default function Home() {
+  return (
+    <ProductivityProvider>
+      <TamboProviderWithContext />
+    </ProductivityProvider>
   );
 }

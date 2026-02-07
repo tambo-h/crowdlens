@@ -36,6 +36,10 @@ interface ProductivityContextType {
     setActiveView: (view: any) => void;
     isChatOpen: boolean;
     setIsChatOpen: (open: boolean) => void;
+
+    // Creative Tools Sync
+    creativeRefreshTrigger: number;
+    triggerCreativeRefresh: () => void;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -43,6 +47,11 @@ const ProductivityContext = createContext<ProductivityContextType | undefined>(u
 export function ProductivityProvider({ children }: { children: React.ReactNode }) {
     const [activeView, setActiveView] = useState("dashboard");
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [creativeRefreshTrigger, setCreativeRefreshTrigger] = useState(0);
+
+    const triggerCreativeRefresh = useCallback(() => {
+        setCreativeRefreshTrigger(prev => prev + 1);
+    }, []);
 
     // Habits state
     const [habits, setHabits] = useState<any[]>([]);
@@ -147,7 +156,8 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         <ProductivityContext.Provider value={{
             habits, setHabits, isLoadingHabits, refreshHabits, toggleHabit: toggleHabitAction,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
-            activeView, setActiveView, isChatOpen, setIsChatOpen
+            activeView, setActiveView, isChatOpen, setIsChatOpen,
+            creativeRefreshTrigger, triggerCreativeRefresh
         }}>
             {children}
         </ProductivityContext.Provider>

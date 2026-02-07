@@ -1,11 +1,6 @@
 /**
  * @file tambo.ts
  * @description Central configuration file for Tambo components and tools
- *
- * This file serves as the central place to register your Tambo components and tools.
- * It exports arrays that will be used by the TamboProvider.
- *
- * Read more about Tambo at https://tambo.co/docs
  */
 
 import { Graph, graphSchema } from "@/components/tambo/graph";
@@ -26,6 +21,13 @@ import { ProductivityDashboard, productivityDashboardSchema } from "@/components
 import { LinkCard, linkCardSchema } from "@/components/productivity/link-card";
 import { ProductivityRules, productivityRulesSchema } from "@/components/productivity/productivity-rules";
 
+// Creative Tools Components
+import { StyledDistractionJournal, distractionJournalSchema } from "@/components/productivity/creative/distraction-journal/styled-journal";
+import { StyledCodeSnippets, codeSnippetsSchema } from "@/components/productivity/creative/code-snippets/styled-snippets";
+import { StyledStandupLog, standupLogSchema } from "@/components/productivity/creative/standup-log/styled-standup";
+import { StyledEnergyMapper, energyMapperSchema } from "@/components/productivity/creative/energy-mapper/styled-mapper";
+import { StyledWeeklyReview, weeklyReviewSchema } from "@/components/productivity/creative/weekly-review/styled-review";
+
 // ProductivityFlow Services
 import {
   getProductivityDashboard,
@@ -36,303 +38,220 @@ import {
   startPomodoroSession,
   toggleHabit,
   saveLink,
+  logDistraction,
+  getDistractions,
+  saveSnippet,
+  getSnippets,
+  saveStandupEntry,
+  getStandupHistory,
+  logEnergyLevel,
+  getEnergyData,
+  saveWeeklyReview,
+  getWeeklyReviews,
 } from "@/services/productivity-service";
 
-/**
- * tools
- *
- * This array contains all the Tambo tools that are registered for use within the application.
- * Each tool is defined with its name, description, and expected props. The tools
- * can be controlled by AI to dynamically fetch data based on user interactions.
- */
-
 export const tools: TamboTool[] = [
-  // Example tools (keep for reference)
-  {
-    name: "countryPopulation",
-    description:
-      "A tool to get population statistics by country with advanced filtering options",
-    tool: getCountryPopulations,
-    inputSchema: z.object({
-      continent: z.string().optional(),
-      sortBy: z.enum(["population", "growthRate"]).optional(),
-      limit: z.number().optional(),
-      order: z.enum(["asc", "desc"]).optional(),
-    }),
-    outputSchema: z.array(
-      z.object({
-        countryCode: z.string(),
-        countryName: z.string(),
-        continent: z.enum([
-          "Asia",
-          "Africa",
-          "Europe",
-          "North America",
-          "South America",
-          "Oceania",
-        ]),
-        population: z.number(),
-        year: z.number(),
-        growthRate: z.number(),
-      }),
-    ),
-  },
-  {
-    name: "globalPopulation",
-    description:
-      "A tool to get global population trends with optional year range filtering",
-    tool: getGlobalPopulationTrend,
-    inputSchema: z.object({
-      startYear: z.number().optional(),
-      endYear: z.number().optional(),
-    }),
-    outputSchema: z.array(
-      z.object({
-        year: z.number(),
-        population: z.number(),
-        growthRate: z.number(),
-      }),
-    ),
-  },
-
   // ProductivityFlow Tools
   {
     name: "getProductivityDashboard",
-    description:
-      "Get comprehensive productivity dashboard data including pomodoro sessions, habits, links, and daily quote",
+    description: "Get comprehensive productivity dashboard data.",
     tool: getProductivityDashboard,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-    }),
-    outputSchema: z.object({
-      pomodoroSessionsToday: z.number(),
-      habitsCompletedToday: z.number(),
-      totalHabits: z.number(),
-      currentStreak: z.number(),
-      recentLinks: z.array(
-        z.object({
-          title: z.string(),
-          url: z.string(),
-          tags: z.array(z.string()),
-        })
-      ),
-      quote: z.object({
-        text: z.string(),
-        author: z.string(),
-      }),
-    }),
+    inputSchema: z.object({ userId: z.string().optional() }),
+    outputSchema: z.any(),
   },
   {
     name: "getHabits",
-    description:
-      "Get user's habits with completion status and streak information. Can filter by category.",
+    description: "Get user's habits with completion status.",
     tool: getHabits,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      category: z.string().optional(),
-    }),
-    outputSchema: z.array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        category: z.enum(["Code", "Learn", "Health", "Review"]),
-        streak: z.number(),
-        completedToday: z.boolean(),
-      })
-    ),
+    inputSchema: z.object({ userId: z.string().optional(), category: z.string().optional() }),
+    outputSchema: z.array(z.any()),
   },
   {
     name: "getSavedLinks",
-    description:
-      "Get saved links with optional filtering by tags or search query. Returns links with metadata.",
+    description: "Get saved links.",
     tool: getSavedLinks,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      tags: z.array(z.string()).optional(),
-      searchQuery: z.string().optional(),
-      limit: z.number().optional(),
-    }),
-    outputSchema: z.array(
-      z.object({
-        id: z.string(),
-        title: z.string(),
-        url: z.string(),
-        tags: z.array(z.string()),
-        notes: z.string().optional(),
-        savedAt: z.string(),
-      })
-    ),
+    inputSchema: z.object({ userId: z.string().optional(), tags: z.array(z.string()).optional(), searchQuery: z.string().optional() }),
+    outputSchema: z.array(z.any()),
   },
   {
     name: "getInspirationalQuote",
-    description:
-      "Get a random inspirational quote for developers. Can filter by category (technology, productivity, motivation).",
+    description: "Get random quote.",
     tool: getInspirationalQuote,
-    inputSchema: z.object({
-      category: z.enum(["technology", "productivity", "motivation"]).optional(),
-    }),
-    outputSchema: z.object({
-      quote: z.string(),
-      author: z.string(),
-      category: z.string(),
-    }),
+    inputSchema: z.object({ category: z.enum(["technology", "productivity", "motivation"]).optional() }),
+    outputSchema: z.any(),
   },
   {
     name: "getPomodoroStats",
-    description:
-      "Get Pomodoro timer statistics including total sessions, minutes, and breakdowns by project or day.",
+    description: "Get Pomodoro stats.",
     tool: getPomodoroStats,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      groupBy: z.enum(["day", "week", "project"]).optional(),
-    }),
-    outputSchema: z.object({
-      totalSessions: z.number(),
-      totalMinutes: z.number(),
-      averagePerDay: z.number(),
-      byProject: z
-        .array(
-          z.object({
-            project: z.string(),
-            sessions: z.number(),
-          })
-        )
-        .optional(),
-      byDay: z
-        .array(
-          z.object({
-            date: z.string(),
-            sessions: z.number(),
-          })
-        )
-        .optional(),
-    }),
+    inputSchema: z.object({ userId: z.string().optional() }),
+    outputSchema: z.any(),
   },
   {
     name: "startPomodoroSession",
-    description:
-      "Start a new Pomodoro work session with optional project tagging and custom duration.",
+    description: "Start Pomodoro session.",
     tool: startPomodoroSession,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      projectName: z.string().optional(),
-      duration: z.number().optional(),
-    }),
-    outputSchema: z.object({
-      sessionId: z.string(),
-      startTime: z.string(),
-      duration: z.number(),
-      projectName: z.string().optional(),
-    }),
+    inputSchema: z.object({ projectName: z.string().optional(), duration: z.number().optional() }),
+    outputSchema: z.any(),
   },
   {
     name: "toggleHabit",
-    description:
-      "Mark a habit as complete or incomplete for a specific date. Updates streak counter.",
+    description: "Toggle habit completion.",
     tool: toggleHabit,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      habitId: z.string(),
-      date: z.string().optional(),
-      completed: z.boolean(),
-    }),
-    outputSchema: z.object({
-      success: z.boolean(),
-      habitId: z.string(),
-      completed: z.boolean(),
-      newStreak: z.number(),
-    }),
+    inputSchema: z.object({ habitId: z.string(), completed: z.boolean() }),
+    outputSchema: z.any(),
   },
   {
     name: "saveLink",
-    description:
-      "Save a new link to the collection with title, tags, and optional notes.",
+    description: "Save a new link.",
     tool: saveLink,
-    inputSchema: z.object({
-      userId: z.string().optional(),
-      url: z.string(),
-      title: z.string(),
-      tags: z.array(z.string()),
-      notes: z.string().optional(),
-    }),
-    outputSchema: z.object({
-      id: z.string(),
-      url: z.string(),
-      title: z.string(),
-      tags: z.array(z.string()),
-      notes: z.string().optional(),
-      savedAt: z.string(),
-    }),
+    inputSchema: z.object({ url: z.string(), title: z.string(), tags: z.array(z.string()) }),
+    outputSchema: z.any(),
+  },
+  // Creative Tools
+  {
+    name: "logDistraction",
+    description: "Log a work distraction.",
+    tool: logDistraction,
+    inputSchema: z.object({ description: z.string(), durationMinutes: z.number(), category: z.string().optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "getDistractions",
+    description: "Get distraction history.",
+    tool: getDistractions,
+    inputSchema: z.object({ startDate: z.string().optional() }),
+    outputSchema: z.array(z.any()),
+  },
+  {
+    name: "saveSnippet",
+    description: "Save code snippet.",
+    tool: saveSnippet,
+    inputSchema: z.object({ title: z.string(), code: z.string(), language: z.string(), tags: z.array(z.string()).optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "getSnippets",
+    description: "Get saved snippets.",
+    tool: getSnippets,
+    inputSchema: z.object({ language: z.string().optional(), searchQuery: z.string().optional() }),
+    outputSchema: z.array(z.any()),
+  },
+  {
+    name: "saveStandupEntry",
+    description: "Log daily standup.",
+    tool: saveStandupEntry,
+    inputSchema: z.object({ today: z.string(), yesterday: z.string(), blockers: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "getStandupHistory",
+    description: "Get standup history.",
+    tool: getStandupHistory,
+    inputSchema: z.object({}),
+    outputSchema: z.array(z.any()),
+  },
+  {
+    name: "logEnergyLevel",
+    description: "Track energy level (1-10).",
+    tool: logEnergyLevel,
+    inputSchema: z.object({ level: z.number(), notes: z.string().optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "getEnergyData",
+    description: "Get energy logs.",
+    tool: getEnergyData,
+    inputSchema: z.object({}),
+    outputSchema: z.array(z.any()),
+  },
+  {
+    name: "saveWeeklyReview",
+    description: "Log weekly review (accomplishments, challenges, next steps).",
+    tool: saveWeeklyReview,
+    inputSchema: z.object({ accomplishments: z.string(), challenges: z.string(), nextWeekGoals: z.string(), rating: z.number() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "getWeeklyReviews",
+    description: "Get past weekly reviews.",
+    tool: getWeeklyReviews,
+    inputSchema: z.object({}),
+    outputSchema: z.array(z.any()),
   },
 ];
 
-/**
- * components
- *
- * This array contains all the Tambo components that are registered for use within the application.
- * Each component is defined with its name, description, and expected props. The components
- * can be controlled by AI to dynamically render UI elements based on user interactions.
- */
 export const components: TamboComponent[] = [
-  // Example components (keep for reference)
   {
     name: "Graph",
-    description:
-      "A component that renders various types of charts (bar, line, pie) using Recharts. Supports customizable data visualization with labels, datasets, and styling options.",
+    description: "Renders charts.",
     component: Graph,
     propsSchema: graphSchema,
   },
   {
-    name: "DataCard",
-    description:
-      "A component that displays options as clickable cards with links and summaries with the ability to select multiple items.",
-    component: DataCard,
-    propsSchema: dataCardSchema,
-  },
-
-  // ProductivityFlow Components
-  {
     name: "PomodoroTimer",
-    description:
-      "Interactive Pomodoro timer with customizable work/break durations, circular progress indicator, session tracking, and project tagging. Displays current time, session type (work/break), and completed sessions.",
+    description: "Pomodoro timer.",
     component: PomodoroTimer,
     propsSchema: pomodoroTimerSchema,
   },
   {
     name: "HabitTracker",
-    description:
-      "Habit tracking component that displays a list of habits with completion status, categories (Code, Learn, Health, Review), and streak counters. Users can toggle habits as complete/incomplete.",
+    description: "Habit tracker.",
     component: HabitTracker,
     propsSchema: habitTrackerSchema,
   },
   {
     name: "InspirationQuote",
-    description:
-      "Display inspirational quotes for developers with author attribution, category badges, and favorite toggle. Includes actions to copy, get new quote, or add custom quotes.",
+    description: "Inspirational quotes.",
     component: InspirationQuote,
     propsSchema: inspirationQuoteSchema,
   },
   {
     name: "ProductivityDashboard",
-    description:
-      "Comprehensive productivity dashboard showing Pomodoro stats, habit completion, streaks, recent links, daily quote, and quick action buttons. Perfect for overview page.",
+    description: "Main dashboard.",
     component: ProductivityDashboard,
     propsSchema: productivityDashboardSchema,
   },
   {
     name: "LinkCard",
-    description:
-      "Display saved links in card or list view with tags, notes, and saved dates. Supports filtering and provides clickable links to resources.",
+    description: "Saved links.",
     component: LinkCard,
     propsSchema: linkCardSchema,
   },
   {
     name: "ProductivityRules",
-    description:
-      "Interactive guide to Cal Newport's Slow Productivity principles. Shows 3 rules with expandable details, tips, examples, and progress tracking. Users can mark rules as practiced.",
+    description: "Slow Productivity rules.",
     component: ProductivityRules,
     propsSchema: productivityRulesSchema,
+  },
+  {
+    name: "DistractionJournal",
+    description: "Log and visualize distractions.",
+    component: StyledDistractionJournal,
+    propsSchema: distractionJournalSchema,
+  },
+  {
+    name: "CodeSnippets",
+    description: "Manage code snippets.",
+    component: StyledCodeSnippets,
+    propsSchema: codeSnippetsSchema,
+  },
+  {
+    name: "StandupLog",
+    description: "Log daily standup status.",
+    component: StyledStandupLog,
+    propsSchema: standupLogSchema,
+  },
+  {
+    name: "EnergyMapper",
+    description: "Track and visualize energy levels throughout the day.",
+    component: StyledEnergyMapper,
+    propsSchema: energyMapperSchema,
+  },
+  {
+    name: "WeeklyReview",
+    description: "Perform structured weekly reflections.",
+    component: StyledWeeklyReview,
+    propsSchema: weeklyReviewSchema,
   },
 ];

@@ -8,34 +8,55 @@
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { theme } from "@/lib/theme";
+import { useProductivity } from "@/context/productivity-context";
+import { getPracticedRules, togglePracticedRule } from "@/services/productivity-service";
 
 export const productivityRulesSchema = z.object({
   showProgress: z.boolean().default(true).describe("Show progress indicators"),
-  practicedRules: z.array(z.number()).default([]).describe("IDs of rules marked as practiced"),
+  initialPracticedRules: z.array(z.number()).default([]).describe("IDs of rules marked as practiced"),
 });
 
 type ProductivityRulesProps = z.input<typeof productivityRulesSchema>;
 
 export function ProductivityRules({
   showProgress = true,
-  practicedRules = [],
 }: ProductivityRulesProps) {
-  const [practiced, setPracticed] = useState<number[]>(practicedRules);
+  const { creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
+  const [practiced, setPracticed] = useState<number[]>([]);
   const [expandedRule, setExpandedRule] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sync with prop updates
+  // Initial fetch and sync with global trigger
   useEffect(() => {
-    if (practicedRules) {
-      setPracticed(practicedRules);
-    }
-  }, [practicedRules]);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getPracticedRules({});
+        setPracticed(data);
+      } catch (error) {
+        console.error("Failed to fetch practiced rules:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [creativeRefreshTrigger]);
 
-  const togglePracticed = (ruleId: number) => {
-    setPracticed((prev) =>
-      prev.includes(ruleId)
-        ? prev.filter((id) => id !== ruleId)
-        : [...prev, ruleId]
-    );
+  const togglePracticed = async (ruleId: number) => {
+    // Optimistic update
+    const isPracticed = practiced.includes(ruleId);
+    setPracticed(prev => isPracticed ? prev.filter(id => id !== ruleId) : [...prev, ruleId]);
+
+    try {
+      await togglePracticedRule({ ruleId });
+      // Notify other components if needed (though rules are mostly local to this view)
+      triggerCreativeRefresh();
+    } catch (error) {
+      console.error("Failed to toggle rule:", error);
+      // Revert on error
+      const freshData = await getPracticedRules({});
+      setPracticed(freshData);
+    }
   };
 
   const toggleExpanded = (ruleId: number) => {
@@ -71,7 +92,7 @@ export function ProductivityRules({
 
       {/* Rules */}
       <div className="space-y-4">
-        {theme.productivityRules.map((rule) => {
+        {theme.productivityRules.map((rule: any) => {
           const isPracticed = practiced.includes(rule.id);
           const isExpanded = expandedRule === rule.id;
 
@@ -130,7 +151,7 @@ export function ProductivityRules({
                     <div>
                       <h4 className="font-semibold text-foreground mb-2">✨ How to apply:</h4>
                       <ul className="space-y-2">
-                        {rule.tips.map((tip, idx) => (
+                        {rule.tips.map((tip: string, idx: number) => (
                           <li key={idx} className="flex items-start gap-2">
                             <span className="text-accent mt-1">→</span>
                             <span className="text-muted-foreground flex-1">{tip}</span>

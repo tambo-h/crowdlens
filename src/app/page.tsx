@@ -178,7 +178,7 @@ const TamboProviderWithContext = () => {
   const { triggerCreativeRefresh } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
-    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveLink"].includes(t.name)) {
+    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveLink", "togglePracticedRule"].includes(t.name)) {
       return {
         ...t,
         tool: async (...args: any[]) => {

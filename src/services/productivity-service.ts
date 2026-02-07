@@ -183,8 +183,25 @@ export async function saveWeeklyReview(input: { accomplishments: string, challen
   return newItem;
 }
 
+const PRACTICED_RULES_KEY = "practiced_rules:user_1";
+
 export async function getWeeklyReviews(input: any) {
   return await redis.get<any[]>(REVIEW_KEY) || [];
+}
+
+export async function getPracticedRules(input: any) {
+  return await redis.get<number[]>(PRACTICED_RULES_KEY) || [];
+}
+
+export async function togglePracticedRule(input: { ruleId: number }) {
+  const practiced = await getPracticedRules({});
+  const isPracticed = practiced.includes(input.ruleId);
+  const updated = isPracticed
+    ? practiced.filter(id => id !== input.ruleId)
+    : [...practiced, input.ruleId];
+
+  await redis.set(PRACTICED_RULES_KEY, updated);
+  return { success: true, practiced: updated };
 }
 
 export async function getPomodoroStats(input: any) {

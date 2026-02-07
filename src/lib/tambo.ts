@@ -48,6 +48,8 @@ import {
   getEnergyData,
   saveWeeklyReview,
   getWeeklyReviews,
+  getPracticedRules,
+  togglePracticedRule,
 } from "@/services/productivity-service";
 
 export const tools: TamboTool[] = [
@@ -162,6 +164,13 @@ export const tools: TamboTool[] = [
     description: "Log weekly review (accomplishments, challenges, goals).",
     tool: saveWeeklyReview,
     inputSchema: z.object({ accomplishments: z.string(), challenges: z.string(), nextWeekGoals: z.string(), rating: z.number() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "togglePracticedRule",
+    description: "Mark a Slow Productivity principle as practiced or not.",
+    tool: togglePracticedRule,
+    inputSchema: z.object({ ruleId: z.number() }),
     outputSchema: z.any(),
   },
 ];

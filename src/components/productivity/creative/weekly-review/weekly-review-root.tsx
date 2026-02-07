@@ -30,12 +30,12 @@ export const WeeklyReviewRoot = React.forwardRef<HTMLDivElement, WeeklyReviewRoo
                 const result = await saveWeeklyReview({ accomplishments, challenges, nextWeekGoals, rating });
                 const newReview: WeeklyReview = {
                     id: result.id,
-                    weekEnding: new Date().toISOString(),
+                    weekEnding: result.date,
                     accomplishments,
                     challenges,
                     nextWeekGoals,
                     rating,
-                    timestamp: result.timestamp,
+                    timestamp: result.date,
                 };
                 setReviews((prev) => [newReview, ...prev]);
             } catch (error) {

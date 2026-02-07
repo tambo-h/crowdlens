@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { WeeklyReview, WeeklyReview as WeeklyReviewType } from "./index";
+import { WeeklyReviewComponents, WeeklyReview as WeeklyReviewType } from "./index";
 import { z } from "zod";
 import { ListChecks, Target, AlertCircle, Star, Save, Sparkles, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
@@ -124,7 +124,7 @@ const ReviewInner = () => {
             {/* Past Reviews */}
             <div className="space-y-6">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground px-4">Insights Archive</h3>
-                <WeeklyReview.Items>
+                <WeeklyReviewComponents.Items>
                     {({ items }) => (
                         <div className="space-y-4">
                             {items.length === 0 ? (
@@ -161,7 +161,7 @@ const ReviewInner = () => {
                             )}
                         </div>
                     )}
-                </WeeklyReview.Items>
+                </WeeklyReviewComponents.Items>
             </div>
         </div>
     );
@@ -169,8 +169,8 @@ const ReviewInner = () => {
 
 export const StyledWeeklyReview = ({ initialReviews }: WeeklyReviewProps) => {
     return (
-        <WeeklyReview.Root initialReviews={initialReviews} className="max-w-4xl mx-auto p-4">
+        <WeeklyReviewComponents.Root initialReviews={initialReviews} className="max-w-4xl mx-auto p-4">
             <ReviewInner />
-        </WeeklyReview.Root>
+        </WeeklyReviewComponents.Root>
     );
 };

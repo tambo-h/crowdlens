@@ -9,17 +9,17 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 
 export const inspirationQuoteSchema = z.object({
-  quote: z.string().describe("The inspirational quote text"),
-  author: z.string().describe("Quote author"),
+  quote: z.string().default("Focus on being productive instead of busy.").describe("The inspirational quote text"),
+  author: z.string().default("Tim Ferriss").describe("Quote author"),
   category: z.enum(["technology", "productivity", "motivation", "custom"]).default("productivity"),
   isFavorite: z.boolean().default(false).describe("Whether this quote is favorited"),
 });
 
-type InspirationQuoteProps = z.infer<typeof inspirationQuoteSchema>;
+type InspirationQuoteProps = z.input<typeof inspirationQuoteSchema>;
 
 export function InspirationQuote({
-  quote,
-  author,
+  quote = "Focus on being productive instead of busy.",
+  author = "Tim Ferriss",
   category = "productivity",
   isFavorite = false,
 }: InspirationQuoteProps) {

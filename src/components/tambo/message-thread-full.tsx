@@ -46,6 +46,10 @@ export interface MessageThreadFullProps extends React.HTMLAttributes<HTMLDivElem
    * @example variant="compact"
    */
   variant?: VariantProps<typeof messageVariants>["variant"];
+  /**
+   * If true, the header (currently history button) will be hidden
+   */
+  hideHeader?: boolean;
 }
 
 /**
@@ -54,7 +58,7 @@ export interface MessageThreadFullProps extends React.HTMLAttributes<HTMLDivElem
 export const MessageThreadFull = React.forwardRef<
   HTMLDivElement,
   MessageThreadFullProps
->(({ className, variant, ...props }, ref) => {
+>(({ className, variant, hideHeader, ...props }, ref) => {
   const { containerRef, historyPosition } = useThreadContainerContext();
   const mergedRef = useMergeRefs<HTMLDivElement | null>(ref, containerRef);
 
@@ -91,7 +95,7 @@ export const MessageThreadFull = React.forwardRef<
   return (
     <div className="flex h-full w-full">
       {/* Thread History Sidebar - rendered first if history is on the left */}
-      {historyPosition === "left" && threadHistorySidebar}
+      {!hideHeader && historyPosition === "left" && threadHistorySidebar}
 
       <ThreadContainer
         ref={mergedRef}
@@ -133,7 +137,7 @@ export const MessageThreadFull = React.forwardRef<
       </ThreadContainer>
 
       {/* Thread History Sidebar - rendered last if history is on the right */}
-      {historyPosition === "right" && threadHistorySidebar}
+      {!hideHeader && historyPosition === "right" && threadHistorySidebar}
     </div>
   );
 });

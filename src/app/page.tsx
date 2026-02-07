@@ -7,64 +7,172 @@ import { InteractableHabitTracker } from "@/components/productivity/habit-tracke
 import { InspirationQuote } from "@/components/productivity/inspiration-quote";
 import { LinkCard } from "@/components/productivity/link-card";
 import { ProductivityRules } from "@/components/productivity/productivity-rules";
-import { CollapsibleChat } from "@/components/tambo/collapsible-chat";
-import { useState } from "react";
-import { TamboProvider } from "@tambo-ai/react";
+import { ChatSidePanel } from "@/components/tambo/chat-side-panel";
+import { ProductivityProvider, useProductivity } from "@/context/productivity-context";
 import { components, tools } from "@/lib/tambo";
+import { TamboProvider } from "@tambo-ai/react";
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Timer,
+  CheckSquare,
+  Link as LinkIcon,
+  Lightbulb,
+  BookOpen,
+  Search,
+  Bell,
+  Settings,
+  AlertOctagon,
+  FileCode,
+  MessageSquare,
+  Activity,
+  CalendarDays
+} from "lucide-react";
 
-export default function Home() {
-  const [activeView, setActiveView] = useState<"dashboard" | "pomodoro" | "habits" | "links" | "inspiration" | "rules">("dashboard");
+// Creative tool imports
+import { StyledDistractionJournal } from "@/components/productivity/creative/distraction-journal/styled-journal";
+import { StyledCodeSnippets } from "@/components/productivity/creative/code-snippets/styled-snippets";
+import { StyledStandupLog } from "@/components/productivity/creative/standup-log/styled-standup";
+import { StyledEnergyMapper } from "@/components/productivity/creative/energy-mapper/styled-mapper";
+import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-review/styled-review";
 
-  // Sample data for components
-  const dashboardData = {
-    userName: "Developer",
-    pomodoroSessionsToday: 3,
-    habitsCompletedToday: 2,
-    totalHabits: 4,
-    currentStreak: 7,
-    recentLinks: [
-      { title: "React Documentation", url: "https://react.dev", tags: ["react", "docs"] },
-      { title: "TypeScript Handbook", url: "https://www.typescriptlang.org/docs/", tags: ["typescript"] },
-    ],
-    quote: {
-      text: "The best way to predict the future is to invent it.",
-      author: "Alan Kay",
-    },
-  };
+function HomeContent() {
+  const { activeView, setActiveView, isChatOpen } = useProductivity();
 
-  const [habitsData, setHabitsData] = useState([
-    { id: "1", name: "Morning Code Review", category: "Code" as const, streak: 12, completedToday: true },
-    { id: "2", name: "Read Tech Articles", category: "Learn" as const, streak: 8, completedToday: true },
-    { id: "3", name: "30min Exercise", category: "Health" as const, streak: 5, completedToday: false },
-    { id: "4", name: "Daily Standup Log", category: "Review" as const, streak: 15, completedToday: false },
-  ]);
-
-  const linksData = [
-    {
-      id: "1",
-      title: "React 19 Release Notes",
-      url: "https://react.dev/blog/2024/12/05/react-19",
-      tags: ["react", "javascript"],
-      notes: "New features and breaking changes",
-      savedAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      title: "Next.js 15 Documentation",
-      url: "https://nextjs.org/docs",
-      tags: ["nextjs", "react"],
-      notes: "App Router guide",
-      savedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: "3",
-      title: "Tailwind CSS v4",
-      url: "https://tailwindcss.com",
-      tags: ["tailwind", "css"],
-      savedAt: new Date(Date.now() - 172800000).toISOString(),
-    },
+  const navItems = [
+    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: "pomodoro", label: "Pomodoro", icon: <Timer className="w-4 h-4" /> },
+    { id: "habits", label: "Habits", icon: <CheckSquare className="w-4 h-4" /> },
+    { id: "links", label: "Links", icon: <LinkIcon className="w-4 h-4" /> },
+    { id: "inspiration", label: "Inspiration", icon: <Lightbulb className="w-4 h-4" /> },
+    { id: "rules", label: "Rules", icon: <BookOpen className="w-4 h-4" /> },
+    { separator: true },
+    { id: "journal", label: "Distractions", icon: <AlertOctagon className="w-4 h-4" /> },
+    { id: "snippets", label: "Snippets", icon: <FileCode className="w-4 h-4" /> },
+    { id: "standup", label: "Standup", icon: <MessageSquare className="w-4 h-4" /> },
+    { id: "energy", label: "Energy", icon: <Activity className="w-4 h-4" /> },
+    { id: "review", label: "Weekly Review", icon: <CalendarDays className="w-4 h-4" /> },
   ];
 
+  return (
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-border bg-card flex flex-col">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-2 mb-1 text-primary">
+            <Sparkles className="w-6 h-6" />
+            <h1 className="text-xl font-bold tracking-tight">CrowdLens</h1>
+          </div>
+          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          {navItems.map((item, idx) => {
+            if (item.separator) return <div key={`sep-${idx}`} className="h-px bg-border my-4 mx-2" />;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveView(item.id!)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium",
+                  activeView === item.id
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-border">
+          <ApiKeyCheck>
+            <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Tambo AI</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">Ready to boost your productivity</p>
+            </div>
+          </ApiKeyCheck>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className={cn(
+        "flex-1 overflow-y-auto transition-all duration-500 ease-in-out",
+        isChatOpen ? "mr-[30%]" : "mr-0"
+      )}>
+        <header className="h-16 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-8">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
+          </h2>
+          <div className="flex items-center gap-4">
+            <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
+              <Bell className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20" />
+          </div>
+        </header>
+
+        <div className="p-8 max-w-6xl mx-auto">
+          {activeView === "dashboard" && <ProductivityDashboard />}
+          {activeView === "pomodoro" && (
+            <div className="py-12 flex items-center justify-center">
+              <PomodoroTimer />
+            </div>
+          )}
+          {activeView === "habits" && (
+            <div className="py-12 flex justify-center">
+              <InteractableHabitTracker />
+            </div>
+          )}
+          {activeView === "links" && (
+            <div className="py-12 flex justify-center">
+              <LinkCard viewMode="cards" />
+            </div>
+          )}
+          {activeView === "inspiration" && (
+            <div className="py-12 flex justify-center">
+              <InspirationQuote />
+            </div>
+          )}
+          {activeView === "rules" && (
+            <div className="py-12 flex justify-center">
+              <ProductivityRules />
+            </div>
+          )}
+
+          {/* Creative Views */}
+          {activeView === "journal" && <StyledDistractionJournal showAnalytics={false} />}
+          {activeView === "snippets" && <StyledCodeSnippets />}
+          {activeView === "standup" && <StyledStandupLog />}
+          {activeView === "energy" && <StyledEnergyMapper />}
+          {activeView === "review" && <StyledWeeklyReview />}
+        </div>
+      </main>
+
+      {/* Chat Side Panel */}
+      <ChatSidePanel />
+    </div>
+  );
+}
+
+const Sparkles = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
+  </svg>
+);
+
+export default function Home() {
   return (
     <TamboProvider
       apiKey={process.env.NEXT_PUBLIC_TAMBO_API_KEY!}
@@ -72,136 +180,9 @@ export default function Home() {
       tools={tools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      <div className="min-h-screen bg-background">
-        {/* Navigation Sidebar */}
-        <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-6 space-y-6">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-primary mb-1">ProductivityFlow</h1>
-            <p className="text-xs text-muted-foreground">Calm Dev Edition</p>
-          </div>
-
-          <nav className="space-y-2">
-            <button
-              onClick={() => setActiveView("dashboard")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "dashboard"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              📊 Dashboard
-            </button>
-            <button
-              onClick={() => setActiveView("pomodoro")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "pomodoro"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              ⏱️ Pomodoro
-            </button>
-            <button
-              onClick={() => setActiveView("habits")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "habits"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              ✅ Habits
-            </button>
-            <button
-              onClick={() => setActiveView("links")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "links"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              🔗 Links
-            </button>
-            <button
-              onClick={() => setActiveView("inspiration")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "inspiration"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              💡 Inspiration
-            </button>
-            <button
-              onClick={() => setActiveView("rules")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${activeView === "rules"
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-foreground hover:bg-muted"
-                }`}
-            >
-              📘 Productivity Rules
-            </button>
-          </nav>
-
-          <div className="absolute bottom-6 left-6 right-6 space-y-3">
-            <div className="border-t border-border pt-4">
-              <ApiKeyCheck>
-                <button
-                  onClick={() => { }} // Could trigger chat open if needed
-                  className="block w-full text-center px-4 py-2 rounded-lg bg-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity text-sm"
-                >
-                  💬 AI Ready
-                </button>
-              </ApiKeyCheck>
-            </div>
-            <a
-              href="/theme-test"
-              className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Theme Test
-            </a>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="ml-64 p-8">
-          <div className="max-w-7xl mx-auto">
-            {activeView === "dashboard" && <ProductivityDashboard {...dashboardData} />}
-
-            {activeView === "pomodoro" && (
-              <div className="flex justify-center items-center min-h-[80vh]">
-                <PomodoroTimer workDuration={25} breakDuration={5} longBreakDuration={15} autoStart={false} />
-              </div>
-            )}
-
-            {activeView === "habits" && (
-              <div className="flex justify-center items-start pt-12">
-                <InteractableHabitTracker habits={habitsData} viewMode="week" />
-              </div>
-            )}
-
-            {activeView === "links" && (
-              <div className="flex justify-center items-start pt-12">
-                <LinkCard links={linksData} viewMode="cards" />
-              </div>
-            )}
-
-            {activeView === "inspiration" && (
-              <div className="flex justify-center items-center min-h-[80vh]">
-                <InspirationQuote
-                  quote="The best way to predict the future is to invent it."
-                  author="Alan Kay"
-                  category="technology"
-                  isFavorite={false}
-                />
-              </div>
-            )}
-
-            {activeView === "rules" && (
-              <div className="flex justify-center items-start pt-12">
-                <ProductivityRules showProgress={true} practicedRules={[]} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Collapsible Chat */}
-        <CollapsibleChat />
-      </div>
+      <ProductivityProvider>
+        <HomeContent />
+      </ProductivityProvider>
     </TamboProvider>
   );
 }

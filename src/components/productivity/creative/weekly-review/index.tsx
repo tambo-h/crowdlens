@@ -1,7 +1,7 @@
 import { WeeklyReviewRoot } from "./weekly-review-root";
 import { WeeklyReviewItems } from "./weekly-review-items";
 
-export const WeeklyReview = {
+export const WeeklyReviewComponents = {
     Root: WeeklyReviewRoot,
     Items: WeeklyReviewItems,
 };

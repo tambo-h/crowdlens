@@ -18,11 +18,11 @@ export const habitTrackerSchema = z.object({
       streak: z.number(),
       completedToday: z.boolean(),
     })
-  ).describe("List of habits to track and manage. You can add new habits here."),
+  ).default([]).describe("List of habits to track and manage. You can add new habits here."),
   viewMode: z.enum(["week", "month"]).default("week").describe("Display mode for the habit tracker"),
 });
 
-type HabitTrackerProps = z.infer<typeof habitTrackerSchema>;
+export type HabitTrackerProps = z.input<typeof habitTrackerSchema>;
 
 const categoryColors = {
   Code: "#A2D2FF",
@@ -31,25 +31,21 @@ const categoryColors = {
   Review: "#F9DCC4",
 };
 
-export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerProps) {
-  const [localHabits, setLocalHabits] = useState(habits || []);
+import { useProductivity } from "@/context/productivity-context";
 
-  // Sync with prop changes (important for AI updates in Interactable mode)
-  useEffect(() => {
-    if (habits) {
-      setLocalHabits(habits);
-    }
-  }, [habits]);
+export function HabitTracker({ habits: initialHabits = [], viewMode = "week" }: HabitTrackerProps) {
+  const { habits, toggleHabit, isLoadingHabits } = useProductivity();
 
-  const toggleHabit = (habitId: string) => {
-    setLocalHabits(prev =>
-      prev.map(h =>
-        h.id === habitId ? { ...h, completedToday: !h.completedToday, streak: !h.completedToday ? h.streak + 1 : h.streak } : h
-      )
+  if (isLoadingHabits) {
+    return (
+      <div className="bg-card rounded-xl p-6 shadow-lg border border-border max-w-2xl w-full text-center py-12">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading your habits...</p>
+      </div>
     );
-  };
+  }
 
-  if (!localHabits || localHabits.length === 0) {
+  if (!habits || habits.length === 0) {
     return (
       <div className="bg-card rounded-xl p-6 shadow-lg border border-border max-w-2xl w-full text-center py-12">
         <h2 className="text-2xl font-bold text-foreground mb-4">Habit Tracker</h2>
@@ -79,7 +75,7 @@ export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerPro
 
       {/* Habits List */}
       <div className="space-y-3">
-        {localHabits.map((habit) => (
+        {habits.map((habit: any) => (
           <div
             key={habit.id}
             className="bg-muted/30 rounded-lg p-4 border border-border hover:border-primary/50 transition-colors"
@@ -90,8 +86,8 @@ export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerPro
                 <button
                   onClick={() => toggleHabit(habit.id)}
                   className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${habit.completedToday
-                      ? "bg-primary border-primary"
-                      : "border-border hover:border-primary/50"
+                    ? "bg-primary border-primary"
+                    : "border-border hover:border-primary/50"
                     }`}
                 >
                   {habit.completedToday && <span className="text-white text-sm">✓</span>}
@@ -106,9 +102,9 @@ export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerPro
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{
-                        backgroundColor: `${categoryColors[habit.category] || "#ccc"}20`,
-                        color: categoryColors[habit.category] || "#666",
-                        border: `1px solid ${categoryColors[habit.category] || "#999"}40`,
+                        backgroundColor: `${(categoryColors as any)[habit.category] || "#ccc"}20`,
+                        color: (categoryColors as any)[habit.category] || "#666",
+                        border: `1px solid ${(categoryColors as any)[habit.category] || "#999"}40`,
                       }}
                     >
                       {habit.category}
@@ -134,10 +130,10 @@ export function HabitTracker({ habits = [], viewMode = "week" }: HabitTrackerPro
       <div className="mt-6 pt-4 border-t border-border">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">
-            Completed today: <span className="font-bold text-foreground">{localHabits.filter(h => h.completedToday).length}/{localHabits.length}</span>
+            Completed today: <span className="font-bold text-foreground">{habits.filter(h => h.completedToday).length}/{habits.length}</span>
           </span>
           <span className="text-muted-foreground">
-            Total streaks: <span className="font-bold text-primary">{localHabits.reduce((sum, h) => sum + h.streak, 0)}</span>
+            Total streaks: <span className="font-bold text-primary">{habits.reduce((sum, h) => sum + h.streak, 0)}</span>
           </span>
         </div>
       </div>

@@ -14,7 +14,7 @@ export const productivityRulesSchema = z.object({
   practicedRules: z.array(z.number()).default([]).describe("IDs of rules marked as practiced"),
 });
 
-type ProductivityRulesProps = z.infer<typeof productivityRulesSchema>;
+type ProductivityRulesProps = z.input<typeof productivityRulesSchema>;
 
 export function ProductivityRules({
   showProgress = true,

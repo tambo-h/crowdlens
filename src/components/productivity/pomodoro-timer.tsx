@@ -16,31 +16,24 @@ export const pomodoroTimerSchema = z.object({
   projectName: z.string().optional().describe("Optional project tag for this session"),
 });
 
-type PomodoroTimerProps = z.infer<typeof pomodoroTimerSchema>;
+import { useProductivity } from "@/context/productivity-context";
+
+type PomodoroTimerProps = z.input<typeof pomodoroTimerSchema>;
 
 export function PomodoroTimer({
-  workDuration = 25,
-  breakDuration = 5,
-  longBreakDuration = 15,
+  workDuration: initialWork = 25,
+  breakDuration: initialBreak = 5,
+  longBreakDuration: initialLongBreak = 15,
   autoStart = false,
   projectName,
 }: PomodoroTimerProps) {
-  // Use props for initial state, but we'll also sync them in useEffect
-  const [timeLeft, setTimeLeft] = useState(workDuration * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [sessionType, setSessionType] = useState<"work" | "break" | "longBreak">("work");
-  const [sessionsCompleted, setSessionsCompleted] = useState(0);
+  const { pomodoro, startPomodoro, pausePomodoro, resetPomodoro, updatePomodoroDurations } = useProductivity();
+  const { timeLeft, isRunning, sessionType, sessionsCompleted, workDuration, breakDuration, longBreakDuration } = pomodoro;
 
-  // Sync state with props changes (important for streaming generative props)
+  // Initialize durations in context if they differ from initial props
   useEffect(() => {
-    if (!isRunning) {
-      const newTime =
-        sessionType === "work" ? workDuration * 60 :
-          sessionType === "break" ? breakDuration * 60 :
-            longBreakDuration * 60;
-      setTimeLeft(newTime);
-    }
-  }, [workDuration, breakDuration, longBreakDuration, sessionType, isRunning]);
+    updatePomodoroDurations(initialWork, initialBreak, initialLongBreak);
+  }, [initialWork, initialBreak, initialLongBreak, updatePomodoroDurations]);
 
   const totalSeconds =
     sessionType === "work" ? workDuration * 60 :
@@ -49,47 +42,18 @@ export function PomodoroTimer({
 
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      // Session complete
-      if (sessionType === "work") {
-        setSessionsCompleted((prev) => prev + 1);
-        const nextType = (sessionsCompleted + 1) % 4 === 0 ? "longBreak" : "break";
-        setSessionType(nextType);
-        // We setTimeLeft here immediately to avoid the sync useEffect jumping back
-        setTimeLeft(nextType === "longBreak" ? longBreakDuration * 60 : breakDuration * 60);
-      } else {
-        setSessionType("work");
-        setTimeLeft(workDuration * 60);
-      }
-
-      if (autoStart) {
-        setIsRunning(true);
-      } else {
-        setIsRunning(false);
-      }
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, timeLeft, sessionType, workDuration, breakDuration, longBreakDuration, autoStart, sessionsCompleted]);
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleStartPause = () => setIsRunning(!isRunning);
-  const handleReset = () => {
-    setIsRunning(false);
-    setTimeLeft(sessionType === "work" ? workDuration * 60 :
-      sessionType === "break" ? breakDuration * 60 :
-        longBreakDuration * 60);
+  const handleStartPause = () => {
+    if (isRunning) pausePomodoro();
+    else startPomodoro({});
   };
+
+  const handleReset = () => resetPomodoro();
 
   return (
     <div className="bg-card rounded-xl p-8 shadow-lg border border-border max-w-md mx-auto">
@@ -106,10 +70,10 @@ export function PomodoroTimer({
       {/* Session Type Badge */}
       <div className="flex justify-center mb-6">
         <span className={`px-4 py-1 rounded-full text-sm font-medium ${sessionType === "work"
-            ? "bg-primary/20 text-primary border border-primary/30"
-            : sessionType === "break"
-              ? "bg-accent/20 text-accent border border-accent/30"
-              : "bg-secondary/20 text-secondary border border-secondary/30"
+          ? "bg-primary/20 text-primary border border-primary/30"
+          : sessionType === "break"
+            ? "bg-accent/20 text-accent border border-accent/30"
+            : "bg-secondary/20 text-secondary border border-secondary/30"
           }`}>
           {sessionType === "work" ? "🎯 Focus Time" : sessionType === "break" ? "☕ Short Break" : "🌟 Long Break"}
         </span>
@@ -155,8 +119,8 @@ export function PomodoroTimer({
         <button
           onClick={handleStartPause}
           className={`px-6 py-3 rounded-lg font-medium transition-all ${isRunning
-              ? "bg-accent text-accent-foreground hover:opacity-90"
-              : "bg-primary text-primary-foreground hover:opacity-90"
+            ? "bg-accent text-accent-foreground hover:opacity-90"
+            : "bg-primary text-primary-foreground hover:opacity-90"
             }`}
         >
           {isRunning ? "⏸ Pause" : "▶ Start"}

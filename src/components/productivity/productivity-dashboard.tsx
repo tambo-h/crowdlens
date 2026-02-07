@@ -8,7 +8,7 @@
 import { z } from "zod";
 
 export const productivityDashboardSchema = z.object({
-  userName: z.string().optional().describe("User's name for personalized greeting"),
+  userName: z.string().default("Developer").describe("User's name for personalized greeting"),
   pomodoroSessionsToday: z.number().default(0).describe("Number of pomodoro sessions completed today"),
   habitsCompletedToday: z.number().default(0).describe("Number of habits completed today"),
   totalHabits: z.number().default(0).describe("Total number of habits tracked"),
@@ -23,26 +23,54 @@ export const productivityDashboardSchema = z.object({
   quote: z.object({
     text: z.string(),
     author: z.string(),
-  }).optional().describe("Daily inspirational quote"),
+  }).default({
+    text: "Focus on being productive instead of busy.",
+    author: "Tim Ferriss"
+  }).describe("Daily inspirational quote"),
 });
 
-type ProductivityDashboardProps = z.infer<typeof productivityDashboardSchema>;
+type ProductivityDashboardProps = z.input<typeof productivityDashboardSchema>;
+
+import { useProductivity } from "@/context/productivity-context";
+import { useEffect, useState } from "react";
+import { getProductivityDashboard } from "@/services/productivity-service";
 
 export function ProductivityDashboard({
-  userName,
-  pomodoroSessionsToday = 0,
-  habitsCompletedToday = 0,
-  totalHabits = 0,
-  currentStreak = 0,
-  recentLinks = [],
-  quote,
+  userName: initialUserName,
+  ...initialStats
 }: ProductivityDashboardProps) {
+  const { pomodoro, habits } = useProductivity();
+  const [stats, setStats] = useState<any>(null);
+
+  useEffect(() => {
+    getProductivityDashboard({}).then(setStats);
+  }, []);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
+
+  const dashboardData = stats || {
+    pomodoroSessionsToday: pomodoro.sessionsCompleted,
+    habitsCompletedToday: habits.filter(h => h.completedToday).length,
+    totalHabits: habits.length,
+    currentStreak: habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0,
+    recentLinks: [],
+    quote: { text: "Loading inspiration...", author: "CrowdLens" }
+  };
+
+  const {
+    userName = initialUserName || "Developer",
+    pomodoroSessionsToday,
+    habitsCompletedToday,
+    totalHabits,
+    currentStreak,
+    recentLinks,
+    quote,
+  } = dashboardData;
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -125,7 +153,7 @@ export function ProductivityDashboard({
           <div className="bg-card rounded-xl p-6 border border-border">
             <h3 className="text-lg font-semibold text-foreground mb-4">📚 Recent Links</h3>
             <div className="space-y-3">
-              {recentLinks.slice(0, 3).map((link, idx) => (
+              {recentLinks.slice(0, 3).map((link: any, idx: number) => (
                 <a
                   key={idx}
                   href={link.url}
@@ -135,7 +163,7 @@ export function ProductivityDashboard({
                 >
                   <h4 className="font-medium text-foreground mb-1">{link.title}</h4>
                   <div className="flex gap-2 flex-wrap">
-                    {link.tags.map((tag, tagIdx) => (
+                    {link.tags.map((tag: string, tagIdx: number) => (
                       <span
                         key={tagIdx}
                         className="px-2 py-0.5 text-xs rounded-md bg-primary/20 text-primary"

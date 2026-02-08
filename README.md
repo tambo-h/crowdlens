@@ -111,8 +111,6 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.
 - For production use, replace the workspace PIN model with real authentication (OAuth/OIDC or a managed auth provider), store user/workspace identity server-side, and add authorization checks for all server actions/tools.
-- No rate limiting or abuse protections are implemented for Tambo/OpenRouter calls.
-- Even for demos, avoid hosting this on a public URL with untrusted users; the PIN model is guessable and offers no isolation between untrusted parties.
 
 ## Scripts
 

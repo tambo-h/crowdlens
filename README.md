@@ -1,15 +1,23 @@
-# CrowdLens
+# TaskStack
 
-CrowdLens is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, habits, links, weekly review, etc.) with an AI side panel that can call server-side tools and render interactive UI components.
+TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, creative tools, and more) with an AI side panel that can call server-side tools and render interactive UI components.
+
+TaskStack was previously called CrowdLens.
+
+> **Security note:** This app is designed for local/demo use only. The current “workspace PIN” model and server actions lack real authentication/authorization and are not safe for production (or any environment with real user data). See **Project notes / known limitations** below for details.
+
+**Secret management:** Don’t commit `.env.local` or any API keys (Tambo, Upstash, OpenRouter, etc.) to Git.
 
 ## What’s in the app
 
-- **Dashboard**: daily overview (Pomodoro count, habit completion, streaks, recent links)
+- **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy, and other key signals)
 - **Pomodoro timer**: sessions tracked in Redis
-- **Habits**: toggle completion + streak tracking
+- **Skills Track**: “skill challenges” you can complete (and optionally expand into steps + resources via OpenRouter)
 - **Links**: save / tag / browse useful links
+- **Energy**: log and visualize energy levels; switches to a recovery view when energy is low
 - **Slow Productivity rules**: built-in reference
 - **Creative tools**: distractions journal, code snippets, standup log, energy mapper, weekly review
+- **Workspace onboarding**: create a new workspace (PIN) and optionally generate a starter setup via OpenRouter
 - **AI side panel**: Tambo chat that can use the registered tools/components
 
 ## Quickstart
@@ -19,6 +27,7 @@ CrowdLens is a developer-focused “productivity OS” built with **Next.js 15**
 - Node.js (this repo uses `npm` via `package-lock.json`)
 - A **Tambo** API key (set as `NEXT_PUBLIC_TAMBO_API_KEY`)
 - **Upstash Redis** credentials
+- An **OpenRouter** API key (optional; see Notes below)
 
 ### 1) Install dependencies
 
@@ -40,11 +49,21 @@ NEXT_PUBLIC_TAMBO_URL=
 # Upstash Redis (required for the productivity tools)
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
+
+# OpenRouter (optional; see Notes below)
+OPENROUTER_API_KEY=...
 ```
 
 Notes:
 
 - You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
+- You can create an OpenRouter API key here: https://openrouter.ai/keys
+- Minimum setup is Tambo + Upstash Redis; OpenRouter is only needed for AI workspace setup and challenge expansion.
+- If `OPENROUTER_API_KEY` is missing, AI workspace setup and challenge expansion will fail when invoked, but non-AI productivity features will continue to work.
+- Dependency mapping:
+  - Core dashboard (Pomodoro, links, energy tracking, creative tools): Tambo + Upstash Redis
+  - AI workspace setup (starter workspace generation): adds OpenRouter
+  - Challenge expansion in Skills Track: adds OpenRouter
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -58,7 +77,7 @@ Open http://localhost:3000.
 
 ## Useful routes
 
-- `/` — main CrowdLens UI (dashboard + AI side panel)
+- `/` — main TaskStack UI (dashboard + AI side panel)
 - `/chat` — full-screen Tambo chat
 - `/interactables` — Tambo UI primitives playground
 - `/api/test-redis` — sanity check Upstash Redis connectivity; useful if the dashboard widgets don’t seem to persist data
@@ -67,8 +86,8 @@ Open http://localhost:3000.
 
 Tambo is configured in `src/lib/tambo.ts`:
 
-- `components`: React components that the model can render (Pomodoro timer, habit tracker, weekly review, etc.)
-- `tools`: server-side functions the model can call (read/write habits, save links, log distractions, …)
+- `components`: React components that the model can render (Pomodoro timer, Skills Track, creative tools, etc.)
+- `tools`: server-side functions the model can call (read/write challenges, save links, log distractions, update energy logs, …)
 
 See the `components` and `tools` arrays in `src/lib/tambo.ts` for the current configuration.
 
@@ -86,8 +105,14 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 
 ## Project notes / known limitations
 
-- The current Redis keying in `src/services/productivity-service.ts` is hard-coded to a placeholder user (`user_1`).
-- In non-local environments, this means all users share the same data; don’t deploy this as-is to production without adding proper auth and per-user keying.
+- **Warning:** This app uses an MVP-level “workspace PIN” model stored client-side in `localStorage` and scoped only by the PIN. Anyone who knows a PIN can read and modify all data for that workspace.
+- Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
+- This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
+- AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
+- Don’t deploy this as-is to production without real authentication and security controls.
+- For production use, replace the workspace PIN model with real authentication (OAuth/OIDC or a managed auth provider), store user/workspace identity server-side, and add authorization checks for all server actions/tools.
+- No rate limiting or abuse protections are implemented for Tambo/OpenRouter calls.
+- Even for demos, avoid hosting this on a public URL with untrusted users; the PIN model is guessable and offers no isolation between untrusted parties.
 
 ## Scripts
 

@@ -64,13 +64,21 @@ const getKeys = (userId: string) => ({
  * Check if a user/PIN already exists in the system
  */
 export async function checkUserExistence(userId: string): Promise<boolean> {
-  const keys = getKeys(userId);
-  // If is_seeded or any skills exist, the user exists
-  const isSeeded = await redis.get(keys.is_seeded);
-  if (isSeeded) return true;
+  console.log("[Service] Checking existence for user:", userId);
+  try {
+    const keys = getKeys(userId);
+    // If is_seeded or any skills exist, the user exists
+    const isSeeded = await redis.get(keys.is_seeded);
+    console.log("[Service] isSeeded result:", isSeeded);
+    if (isSeeded) return true;
 
-  const challenges = await redis.get(keys.skills);
-  return !!challenges;
+    const challenges = await redis.get(keys.skills);
+    console.log("[Service] challenges check result:", !!challenges);
+    return !!challenges;
+  } catch (error) {
+    console.error("[Service] Error in checkUserExistence:", error);
+    throw error;
+  }
 }
 
 export interface ChallengeStep {

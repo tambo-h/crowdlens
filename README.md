@@ -45,6 +45,7 @@ UPSTASH_REDIS_REST_TOKEN=...
 
 # Optional (but recommended): OpenRouter (used for AI workspace setup + challenge expansion)
 OPENROUTER_API_KEY=...
+# Without this, the app will still start, but AI workspace setup + challenge expansion will fail.
 ```
 
 Notes:
@@ -93,7 +94,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 
 ## Project notes / known limitations
 
-- “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys.
+- “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys. Anyone with the PIN can access the workspace.
 - Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, the app still runs, but those flows will error.
 - Don’t deploy this as-is to production without real authentication and security controls.

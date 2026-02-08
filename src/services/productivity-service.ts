@@ -61,6 +61,21 @@ const getKeys = (userId: string) => ({
 });
 
 /**
+ * Normalizes arguments for functions that can be called either as:
+ * 1. (userId: string, input: T)
+ * 2. (input: T & { userId: string }) 
+ */
+function normalizeArgs<T>(arg1: any, arg2?: T): { userId: string, input: T } {
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    // Case 2: (input: T & { userId: string })
+    const { userId, ...input } = arg1;
+    return { userId: userId || (arg1 as any).id, input: input as T };
+  }
+  // Case 1: (userId: string, input: T)
+  return { userId: arg1, input: arg2 as T };
+}
+
+/**
  * Check if a user/PIN already exists in the system
  */
 export async function checkUserExistence(userId: string): Promise<boolean> {
@@ -103,17 +118,18 @@ export interface Challenge {
  * Get sample productivity data for dashboard
  */
 export async function getProductivityDashboard(userId: string): Promise<any> {
-  const keys = getKeys(userId);
-  const challenges = await getChallenges(userId);
+  const { userId: actualUserId } = normalizeArgs(userId, {});
+  const keys = getKeys(actualUserId);
+  const challenges = await getChallenges(actualUserId);
   const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
 
   return {
     pomodoroSessionsToday: Number(sessions),
-    challengesCompleted: challenges.filter(c => c.completed).length,
+    challengesCompletedToday: challenges.filter(c => c.completed).length,
     totalChallenges: challenges.length,
     activeRole: challenges.length > 0 ? challenges[0].role : "General",
-    recentLinks: await getSavedLinks(userId, { limit: 3 }),
-    quote: await getInspirationalQuote(userId, {}),
+    recentLinks: await getSavedLinks(actualUserId, { limit: 3 }),
+    quote: await getInspirationalQuote(actualUserId, {}),
   };
 }
 
@@ -121,10 +137,11 @@ export async function getProductivityDashboard(userId: string): Promise<any> {
  * Get user's challenges from Redis
  */
 export async function getChallenges(userId: string, input: { role?: string } = {}): Promise<Challenge[]> {
-  const keys = getKeys(userId);
+  const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
+  const keys = getKeys(actualUserId);
   const challenges = await redis.get<Challenge[]>(keys.skills) || [];
 
-  if (input.role) return challenges.filter((c) => c.role === input.role);
+  if (actualInput?.role) return challenges.filter((c) => c.role === actualInput.role);
   return challenges.sort((a, b) => a.order - b.order);
 }
 
@@ -159,15 +176,16 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
  * Save new challenge (Can be called by user or AI)
  */
 export async function saveChallenge(userId: string, challenge: Omit<Challenge, "id">): Promise<Challenge> {
-  const keys = getKeys(userId);
-  const challenges = await getChallenges(userId);
+  const { userId: actualUserId, input: actualChallenge } = normalizeArgs(userId, challenge);
+  const keys = getKeys(actualUserId);
+  const challenges = await getChallenges(actualUserId);
   const newChallenge: Challenge = {
-    ...challenge,
+    ...actualChallenge,
     id: `c_${Date.now()}`,
     completed: false,
-    steps: challenge.steps || [],
-    resources: challenge.resources || [],
-    order: challenge.order ?? challenges.length
+    steps: actualChallenge.steps || [],
+    resources: actualChallenge.resources || [],
+    order: actualChallenge.order ?? challenges.length
   };
   await redis.set(keys.skills, [newChallenge, ...challenges]);
   return newChallenge;
@@ -422,19 +440,31 @@ export async function applyAIPracticedRules(userId: string, rules: string[]): Pr
  * AI-Driven Workspace Setup
  */
 export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, confirm?: boolean, data?: any }) {
-  const keys = getKeys(userId);
+  console.log("[Service] setupPersonalizedWorkspace CALLED");
+  const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
+  console.log("[Service] normalized userId:", actualUserId, "normalized input:", actualInput);
 
-  if (!input.confirm) {
-    console.log("[Productivity-Service] Starting AI setup for skill:", input.skill);
-    const generated = await generatePersonalizedData(input.skill);
+  if (!actualUserId) {
+    console.error("[Service] Missing userId in setupPersonalizedWorkspace");
+    return {
+      success: false,
+      message: "Security error: Workspace PIN missing. Please enter your PIN to continue."
+    };
+  }
+
+  const keys = getKeys(actualUserId);
+
+  if (!actualInput.confirm) {
+    console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill);
+    const generated = await generatePersonalizedData(actualInput.skill);
     const habitNames = generated.habits.map(h => h.name).join(", ");
 
     // Store draft in Redis temporarily (expiring in 30 minutes)
     await redis.set(keys.setup_draft, generated, { ex: 1800 });
-    console.log("[Productivity-Service] Draft stored in Redis for user:", userId);
+    console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
 
     return {
-      message: `I've prepared a personalized setup for a ${input.skill}. Here's a preview:\n\n**Habits**: ${habitNames}\n\n**Resources**: ${generated.links.length} curated links.\n\nShould I apply these to your workspace?`,
+      message: `I've prepared a personalized setup for a ${actualInput.skill}. Here's a preview:\n\n**Habits**: ${habitNames}\n\n**Resources**: ${generated.links.length} curated links.\n\nShould I apply these to your workspace?`,
       elicitation: {
         title: "Confirm Workspace Setup",
         fields: [
@@ -444,12 +474,12 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     };
   }
 
-  console.log("[Productivity-Service] Confirming setup for user:", userId);
+  console.log("[Productivity-Service] Confirming setup for user:", actualUserId);
 
   // Retrieve from Redis
   const draft = await redis.get<any>(keys.setup_draft);
   if (!draft) {
-    console.error("[Productivity-Service] No draft found in Redis for user:", userId);
+    console.error("[Productivity-Service] No draft found in Redis for user:", actualUserId);
     return {
       success: false,
       message: "Setup failed: The session expired or the data was lost. Please try describing your role again."
@@ -460,22 +490,22 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
   const links = draft.links || [];
   console.log("[Productivity-Service] Applying setup from draft - Challenges:", challenges.length, "Links:", links.length);
 
-  await batchSaveChallenges(userId, challenges.map((h: any, i: number) => ({
+  await batchSaveChallenges(actualUserId, challenges.map((h: any, i: number) => ({
     title: h.name,
     completed: false,
     steps: [],
     resources: [],
-    role: input.skill,
+    role: actualInput.skill,
     order: i
   })));
-  await batchSaveLinks(userId, links);
+  await batchSaveLinks(actualUserId, links);
 
   // Cleanup
   await redis.del(keys.setup_draft);
 
   return {
     success: true,
-    message: `Awesome! Your workspace is now optimized for a ${input.skill}. Your new skills and resources have been added.`
+    message: `Awesome! Your workspace is now optimized for a ${actualInput.skill}. Your new skills and resources have been added.`
   };
 }
 

@@ -106,17 +106,17 @@ export function ProductivityDashboard({
             </p>
           </div>
 
-          {/* Skill Stats */}
+          {/* Skills Mastery Stats */}
           <div className="bg-card rounded-xl p-6 border border-border hover:border-accent/50 transition-colors">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Skills Mastery</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Active Tracks</h3>
               <span className="text-2xl">🎯</span>
             </div>
             <p className="text-3xl font-bold text-accent">
-              {challengesCompleted}/{totalChallenges}
+              {Array.from(new Set(challenges.map(c => c.role || "General"))).length}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalChallenges > 0 ? Math.round((challengesCompleted / totalChallenges) * 100) : 0}% complete
+              {challengesCompleted}/{totalChallenges} total skills mastered
             </p>
           </div>
 

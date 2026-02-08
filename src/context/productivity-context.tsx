@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence } from "@/services/productivity-service";
+import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, saveChallenge as saveChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence } from "@/services/productivity-service";
 
 interface PomodoroState {
     isRunning: boolean;
@@ -24,6 +24,7 @@ interface ProductivityContextType {
     isLoadingChallenges: boolean;
     expandingIds: string[];
     refreshChallenges: () => Promise<void>;
+    saveChallenge: (challenge: Omit<Challenge, "id">) => Promise<void>;
     toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<void>;
     expandChallengeDetails: (challengeId: string) => Promise<void>;
 
@@ -163,6 +164,12 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     }, [refreshChallenges, refreshCurrentEnergy, creativeRefreshTrigger, userId]);
 
+    const handleSaveChallenge = async (challenge: Omit<Challenge, "id">) => {
+        if (!userId) return;
+        await saveChallengeService(userId, challenge);
+        await refreshChallenges();
+    };
+
     const handleToggleChallenge = async (challengeId: string, completed?: boolean, stepId?: string) => {
         if (!userId) return;
 
@@ -264,6 +271,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     return (
         <ProductivityContext.Provider value={{
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
+            saveChallenge: handleSaveChallenge,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,

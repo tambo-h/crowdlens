@@ -34,6 +34,7 @@ type ProductivityDashboardProps = z.input<typeof productivityDashboardSchema>;
 import { useProductivity } from "@/context/productivity-context";
 import { useEffect, useState } from "react";
 import { getProductivityDashboard } from "@/services/productivity-service";
+import { ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
 
 export function ProductivityDashboard({
   userName: initialUserName,
@@ -179,6 +180,72 @@ export function ProductivityDashboard({
                   </div>
                 </a>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Onboarding Tutorial & PIN Copy (Only for new users) */}
+        {totalChallenges === 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            {/* PIN Copy Card */}
+            <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl p-6 border border-indigo-500/30 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <ShieldCheck className="w-24 h-24 text-indigo-400" />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                  Your Workspace Security
+                </h3>
+                <p className="text-sm text-indigo-200/70 mb-6 leading-relaxed">
+                  Your workspace is protected by a 6-digit PIN. Save this to recover your account if you clear your browser data.
+                </p>
+                <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/10">
+                  <span className="text-2xl font-black tracking-[0.5em] text-white">
+                    {userId?.replace("up_", "") || "000000"}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const pin = userId?.replace("up_", "") || "000000";
+                      navigator.clipboard.writeText(pin);
+                      alert("PIN copied to clipboard!");
+                    }}
+                    className="px-4 py-2 bg-white text-slate-950 rounded-lg text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
+                  >
+                    Copy PIN
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt Examples Card */}
+            <div className="bg-card rounded-2xl p-6 border border-border shadow-xl">
+              <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Quick Setup Guides
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { label: "Next.js Dev", prompt: "setup my workspace as a nextjs developer" },
+                  { label: "Business Analyst", prompt: "setup my workspace as a business analyst" },
+                  { label: "Project Manager", prompt: "setup my workspace as a project manager" },
+                ].map((ex) => (
+                  <button
+                    key={ex.label}
+                    onClick={() => {
+                      navigator.clipboard.writeText(ex.prompt);
+                      alert(`Prompt for ${ex.label} copied! Paste it in the chat to start.`);
+                    }}
+                    className="w-full p-3 rounded-xl bg-muted/30 border border-border hover:border-primary/50 hover:bg-muted/50 transition-all text-left flex items-center justify-between group"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-foreground">{ex.label}</p>
+                      <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">"{ex.prompt}"</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}

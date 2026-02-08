@@ -131,7 +131,7 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
 
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-bold text-foreground flex-1 line-clamp-2 leading-tight group-hover/link:text-primary transition-colors">
-                  {link.title}
+                  {link.title || getSafeHostname(link.url)}
                 </h3>
               </div>
 

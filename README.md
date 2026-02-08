@@ -95,9 +95,10 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 ## Project notes / known limitations
 
 - “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys. Anyone with the PIN can access the workspace.
-- This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
 - Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
-- AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, the app still runs, but those flows will error.
+- Because Redis keys are scoped only by the workspace PIN, anyone who knows a PIN can read and modify all data for that workspace.
+- This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
+- AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.
 
 ## Scripts

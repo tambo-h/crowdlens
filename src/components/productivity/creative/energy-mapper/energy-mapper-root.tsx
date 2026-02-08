@@ -13,7 +13,7 @@ export interface EnergyMapperRootProps {
 
 export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRootProps>(
     ({ children, asChild, initialEnergyData = [], ...props }, ref) => {
-        const { creativeRefreshTrigger, userId } = useProductivity();
+        const { creativeRefreshTrigger, userId, refreshCurrentEnergy } = useProductivity();
         const [energyData, setEnergyData] = React.useState<EnergyLevel[]>(initialEnergyData);
         const [isLoading, setIsLoading] = React.useState(false);
 
@@ -46,6 +46,7 @@ export const EnergyMapperRoot = React.forwardRef<HTMLDivElement, EnergyMapperRoo
                     timestamp: result.timestamp,
                 };
                 setEnergyData((prev) => [...prev, newEntry]);
+                refreshCurrentEnergy();
             } catch (error) {
                 console.error("Failed to log energy:", error);
             } finally {

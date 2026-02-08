@@ -40,9 +40,11 @@ import { StyledEnergyMapper } from "@/components/productivity/creative/energy-ma
 import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-review/styled-review";
 
 import { Onboarding } from "@/components/auth/onboarding";
+import { RecoveryTools } from "@/components/productivity/recovery-tools";
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh, userId } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
+  const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   if (!userId) {
     return <Onboarding />;
@@ -64,13 +66,16 @@ function HomeContent() {
   ];
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className={cn(
+      "flex h-screen overflow-hidden transition-colors duration-1000",
+      isLowEnergy ? "bg-[#020617]" : "bg-background"
+    )}>
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-card flex flex-col">
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-2 mb-1 text-primary">
             <Sparkles className="w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight">CrowdLens</h1>
+            <h1 className="text-xl font-bold tracking-tight">TaskStack</h1>
           </div>
           <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
         </div>
@@ -132,6 +137,17 @@ function HomeContent() {
             {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
           </h2>
           <div className="flex items-center gap-4">
+            {currentEnergy !== null && (
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-700",
+                isLowEnergy
+                  ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse"
+                  : "bg-primary/10 border-primary/20 text-primary"
+              )}>
+                <Activity className="w-3 h-3" />
+                <span>Energy: {currentEnergy}/10</span>
+              </div>
+            )}
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               <Bell className="w-5 h-5" />
             </button>
@@ -140,7 +156,9 @@ function HomeContent() {
         </header>
 
         <div className="p-8 max-w-6xl mx-auto">
-          {activeView === "dashboard" && <ProductivityDashboard />}
+          {activeView === "dashboard" && (
+            isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />
+          )}
           {activeView === "pomodoro" && (
             <div className="py-12 flex items-center justify-center">
               <PomodoroTimer />
@@ -187,7 +205,16 @@ const TamboProviderWithContext = () => {
   const { triggerCreativeRefresh, userId } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
-    if (["saveSnippet", "logDistraction", "saveStandupEntry", "logEnergyLevel", "saveWeeklyReview", "toggleHabit", "saveHabit", "saveLink", "togglePracticedRule", "saveQuote", "seedProductivityData"].includes(t.name)) {
+    // All tools that take (userId, input) should be wrapped
+    const userIdTools = [
+      "getProductivityDashboard", "getHabits", "getSavedLinks", "getInspirationalQuote",
+      "getPomodoroStats", "startPomodoroSession", "toggleHabit", "saveHabit", "saveLink",
+      "logDistraction", "getDistractions", "saveSnippet", "getSnippets", "saveStandupEntry",
+      "logEnergyLevel", "getEnergyData", "saveWeeklyReview", "getWeeklyReviews",
+      "togglePracticedRule", "saveQuote", "seedProductivityData"
+    ];
+
+    if (userIdTools.includes(t.name)) {
       return {
         ...t,
         tool: async (...args: any[]) => {

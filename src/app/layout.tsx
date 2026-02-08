@@ -1,5 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "TaskStack | Unified Productivity OS",
+  description: "An AI-powered workspace for deep work, habit tracking, and creative energy management.",
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

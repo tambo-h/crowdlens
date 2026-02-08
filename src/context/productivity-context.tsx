@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { HabitTrackerProps } from "@/components/productivity/habit-tracker";
-import { getHabits, toggleHabit as toggleHabitService, startPomodoroSession as startPomodoroService, seedProductivityData } from "@/services/productivity-service";
+import { getHabits, toggleHabit as toggleHabitService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData } from "@/services/productivity-service";
 
 interface PomodoroState {
     isRunning: boolean;
@@ -44,6 +44,10 @@ interface ProductivityContextType {
     // Creative Tools Sync
     creativeRefreshTrigger: number;
     triggerCreativeRefresh: () => void;
+
+    // Energy Awareness
+    currentEnergy: number | null;
+    refreshCurrentEnergy: () => Promise<void>;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -53,6 +57,9 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [activeView, setActiveView] = useState("dashboard");
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [creativeRefreshTrigger, setCreativeRefreshTrigger] = useState(0);
+
+    // Energy state
+    const [currentEnergy, setCurrentEnergy] = useState<number | null>(null);
 
     // Habits state
     const [habits, setHabits] = useState<any[]>([]);
@@ -71,7 +78,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     // Load userId from localStorage on mount
     useEffect(() => {
-        const storedId = localStorage.getItem("crowdlens_user_id");
+        const storedId = localStorage.getItem("taskstack_user_id");
         if (storedId) {
             setUserId(storedId);
         }
@@ -80,7 +87,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     // Sync userId to localStorage and seed data
     useEffect(() => {
         if (userId) {
-            localStorage.setItem("crowdlens_user_id", userId);
+            localStorage.setItem("taskstack_user_id", userId);
             // Seed data if this is a new user (or ensure it exists)
             seedProductivityData(userId).then(() => {
                 triggerCreativeRefresh();
@@ -113,11 +120,26 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     }, [userId]);
 
+    const refreshCurrentEnergy = useCallback(async () => {
+        if (!userId) return;
+        try {
+            const data = await getEnergyData(userId);
+            if (data && data.length > 0) {
+                // Get the most recent level
+                const latest = data[data.length - 1].level;
+                setCurrentEnergy(latest);
+            }
+        } catch (err) {
+            console.error("Failed to fetch energy data", err);
+        }
+    }, [userId]);
+
     useEffect(() => {
         if (userId) {
             refreshHabits();
+            refreshCurrentEnergy();
         }
-    }, [refreshHabits, creativeRefreshTrigger, userId]);
+    }, [refreshHabits, refreshCurrentEnergy, creativeRefreshTrigger, userId]);
 
     const handleToggleHabit = async (habitId: string, completed: boolean) => {
         if (!userId) return;
@@ -197,7 +219,8 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,
-            userId, setUserId, onboardGuest
+            userId, setUserId, onboardGuest,
+            currentEnergy, refreshCurrentEnergy
         }}>
             {children}
         </ProductivityContext.Provider>

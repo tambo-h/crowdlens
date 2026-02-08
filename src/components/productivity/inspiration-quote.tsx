@@ -9,7 +9,7 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 
 export const inspirationQuoteSchema = z.object({
-  quote: z.string().default("Focus on being productive instead of busy.").describe("The inspirational quote text"),
+  text: z.string().default("Focus on being productive instead of busy.").describe("The inspirational quote text"),
   author: z.string().default("Tim Ferriss").describe("Quote author"),
   category: z.enum(["technology", "productivity", "motivation", "custom"]).default("productivity"),
   isFavorite: z.boolean().default(false).describe("Whether this quote is favorited"),
@@ -21,14 +21,14 @@ import { getInspirationalQuote, saveQuote } from "@/services/productivity-servic
 type InspirationQuoteProps = z.input<typeof inspirationQuoteSchema>;
 
 export function InspirationQuote({
-  quote: initialQuote = "Focus on being productive instead of busy.",
+  text: initialText = "Focus on being productive instead of busy.",
   author: initialAuthor = "Tim Ferriss",
   category: initialCategory = "productivity",
   isFavorite: initialFavorite = false,
 }: InspirationQuoteProps) {
   const { creativeRefreshTrigger, triggerCreativeRefresh, userId } = useProductivity();
   const [favorite, setFavorite] = useState(initialFavorite);
-  const [currentQuote, setCurrentQuote] = useState({ text: initialQuote, author: initialAuthor, category: initialCategory });
+  const [currentQuote, setCurrentQuote] = useState({ text: initialText, author: initialAuthor, category: initialCategory });
   const [isLoading, setIsLoading] = useState(false);
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [newQuoteText, setNewQuoteText] = useState("");
@@ -39,7 +39,7 @@ export function InspirationQuote({
     setIsLoading(true);
     try {
       const q = await getInspirationalQuote(userId, { category: categoryFilter });
-      setCurrentQuote({ text: q.quote, author: q.author, category: q.category });
+      setCurrentQuote({ text: q.text, author: q.author, category: q.category });
     } catch (error) {
       console.error("Failed to fetch quote:", error);
     } finally {
@@ -59,7 +59,7 @@ export function InspirationQuote({
     if (!newQuoteText || !newAuthorText || !userId) return;
     setIsLoading(true);
     try {
-      await saveQuote(userId, { quote: newQuoteText, author: newAuthorText, category: "custom" });
+      await saveQuote(userId, { text: newQuoteText, author: newAuthorText, category: "custom" });
       setShowAddCustom(false);
       setNewQuoteText("");
       setNewAuthorText("");

@@ -124,11 +124,11 @@ export async function getInspirationalQuote(userId: string, input: { category?: 
   const keys = getKeys(userId);
   const customQuotes = await redis.get<any[]>(keys.quotes) || [];
   const defaultQuotes = [
-    { quote: "The best way to predict the future is to invent it.", author: "Alan Kay", category: "productivity" },
-    { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs", category: "productivity" },
-    { quote: "Focus on being productive instead of busy.", author: "Tim Ferriss", category: "productivity" },
-    { quote: "It’s not at all that I’m so smart, it’s just that I stay with problems longer.", author: "Albert Einstein", category: "motivation" },
-    { quote: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein", category: "motivation" }
+    { text: "The best way to predict the future is to invent it.", author: "Alan Kay", category: "productivity" },
+    { text: "The only way to do great work is to love what you do.", author: "Steve Jobs", category: "productivity" },
+    { text: "Focus on being productive instead of busy.", author: "Tim Ferriss", category: "productivity" },
+    { text: "It’s not at all that I’m so smart, it’s just that I stay with problems longer.", author: "Albert Einstein", category: "motivation" },
+    { text: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein", category: "motivation" }
   ];
 
   const pool = input?.category === "custom" ? customQuotes : [...defaultQuotes, ...customQuotes];
@@ -139,10 +139,15 @@ export async function getInspirationalQuote(userId: string, input: { category?: 
     : pool;
 
   const finalPool = filtered.length > 0 ? filtered : pool;
-  return finalPool[Math.floor(Math.random() * finalPool.length)];
+  const selected = finalPool[Math.floor(Math.random() * finalPool.length)];
+  return {
+    text: selected.text || (selected as any).quote,
+    author: selected.author,
+    category: selected.category
+  };
 }
 
-export async function saveQuote(userId: string, input: { quote: string, author: string, category: string }) {
+export async function saveQuote(userId: string, input: { text: string, author: string, category: string }) {
   const keys = getKeys(userId);
   const customQuotes = await redis.get<any[]>(keys.quotes) || [];
   const newQuote = { ...input, id: `q_${Date.now()}` };
@@ -256,22 +261,64 @@ export async function seedProductivityData(userId: string) {
     { id: "h2", name: "Read Technical Book", category: "Learn", streak: 3, completedToday: false },
     { id: "h3", name: "Morning Run", category: "Health", streak: 7, completedToday: false },
     { id: "h4", name: "Plan Tomorrow", category: "Review", streak: 10, completedToday: false },
-    { id: "h5", name: "Review Code Snippets", category: "Code", streak: 2, completedToday: false }
+    { id: "h5", name: "Review Code Snippets", category: "Code", streak: 2, completedToday: false },
+    { id: "h6", name: "Solve LeetCode Problem", category: "Code", streak: 3, completedToday: false },
+    { id: "h7", name: "Learn New Framework", category: "Learn", streak: 1, completedToday: false },
+    { id: "h8", name: "Drink 2L Water", category: "Health", streak: 12, completedToday: false },
+    { id: "h9", name: "Weekly Reflection", category: "Review", streak: 4, completedToday: false },
+    { id: "h10", name: "Clear Email Inbox", category: "Review", streak: 8, completedToday: false },
+    { id: "h11", name: "Open Source Contribution", category: "Code", streak: 2, completedToday: false },
+    { id: "h12", name: "Meditate 10 Mins", category: "Health", streak: 6, completedToday: false },
+    { id: "h13", name: "Write Dev Journal", category: "Review", streak: 5, completedToday: false },
+    { id: "h14", name: "Clean Desk Space", category: "Review", streak: 15, completedToday: false },
+    { id: "h15", name: "Update Portfolio", category: "Code", streak: 1, completedToday: false }
   ];
 
   const links = [
     { id: "l1", title: "Next.js Documentation", url: "https://nextjs.org/docs", tags: ["dev", "nextjs"], savedAt: new Date().toISOString() },
-    { id: "l2", title: "Upstash Redis", url: "https://upstash.com", tags: ["db", "redis"], savedAt: new Date().toISOString() }
+    { id: "l2", title: "Upstash Redis", url: "https://upstash.com", tags: ["db", "redis"], savedAt: new Date().toISOString() },
+    { id: "l3", title: "Tailwind CSS", url: "https://tailwindcss.com", tags: ["design", "css"], savedAt: new Date().toISOString() },
+    { id: "l4", title: "Lucide Icons", url: "https://lucide.dev", tags: ["design", "icons"], savedAt: new Date().toISOString() },
+    { id: "l5", title: "Framer Motion", url: "https://www.framer.com/motion/", tags: ["animation", "react"], savedAt: new Date().toISOString() },
+    { id: "l6", title: "Slow Productivity", url: "https://www.calnewport.com/blog/", tags: ["philosophy", "productivity"], savedAt: new Date().toISOString() },
+    { id: "l7", title: "MDN Web Docs", url: "https://developer.mozilla.org/", tags: ["reference", "web"], savedAt: new Date().toISOString() },
+    { id: "l8", title: "Dribbble", url: "https://dribbble.com", tags: ["inspiration", "ui"], savedAt: new Date().toISOString() },
+    { id: "l9", title: "GitHub", url: "https://github.com", tags: ["dev", "vcs"], savedAt: new Date().toISOString() },
+    { id: "l10", title: "Excalidraw", url: "https://excalidraw.com", tags: ["tools", "design"], savedAt: new Date().toISOString() },
+    { id: "l11", title: "Vercel", url: "https://vercel.com", tags: ["deployment", "cloud"], savedAt: new Date().toISOString() },
+    { id: "l12", title: "Stack Overflow", url: "https://stackoverflow.com", tags: ["community", "dev"], savedAt: new Date().toISOString() },
+    { id: "l13", title: "Product Hunt", url: "https://producthunt.com", tags: ["inspiration", "marketing"], savedAt: new Date().toISOString() },
+    { id: "l14", title: "Hacker News", url: "https://news.ycombinator.com", tags: ["news", "tech"], savedAt: new Date().toISOString() },
+    { id: "l15", title: "Can I Use?", url: "https://caniuse.com", tags: ["browser", "reference"], savedAt: new Date().toISOString() }
   ];
+
+  const energyEntries = Array.from({ length: 15 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (14 - i));
+    const levels = [7, 8, 4, 3, 6, 9, 7, 5, 4, 8, 6, 7, 3, 5, 8];
+    const notes = [
+      "Good sleep, feeling pumped", "Highly focused", "Mid-day slump", "Poor sleep, low energy",
+      "Back on track", "Flow state reached", "Steady focus", "Feeling okay", "Tired by evening",
+      "Great morning session", "Good work day", "Strong focus", "Late night debug session",
+      "Resting more", "Feeling energized"
+    ];
+    return {
+      id: `e_seed_${i}`,
+      level: levels[i],
+      notes: notes[i],
+      timestamp: date.toISOString()
+    };
+  });
 
   await redis.set(keys.habits, habits);
   await redis.set(keys.links, links);
+  await redis.set(keys.energy, energyEntries);
   await redis.set(keys.is_seeded, true);
 
   // Clear others for fresh user
   await redis.del(keys.distractions);
   await redis.del(keys.snippets);
-  await redis.del(keys.energy);
+  await redis.del(keys.standup);
   await redis.del(keys.review);
   await redis.del(keys.quotes);
   await redis.del(keys.practiced_rules);

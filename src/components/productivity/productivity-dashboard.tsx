@@ -39,13 +39,13 @@ export function ProductivityDashboard({
   userName: initialUserName,
   ...initialStats
 }: ProductivityDashboardProps) {
-  const { pomodoro, habits, userId } = useProductivity();
+  const { pomodoro, habits, userId, currentEnergy, creativeRefreshTrigger } = useProductivity();
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     if (!userId) return;
     getProductivityDashboard(userId).then(setStats);
-  }, [userId]);
+  }, [userId, creativeRefreshTrigger]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -60,7 +60,7 @@ export function ProductivityDashboard({
     totalHabits: habits.length,
     currentStreak: habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0,
     recentLinks: [],
-    quote: { text: "Loading inspiration...", author: "CrowdLens" }
+    quote: { text: "Loading inspiration...", author: "TaskStack" }
   };
 
   const {
@@ -129,14 +129,18 @@ export function ProductivityDashboard({
             <p className="text-xs text-muted-foreground mt-1">days in a row</p>
           </div>
 
-          {/* Links Stats */}
-          <div className="bg-card rounded-xl p-6 border border-border hover:border-secondary/50 transition-colors">
+          {/* Energy Stats */}
+          <div className="bg-card rounded-xl p-6 border border-border hover:border-indigo-500/50 transition-colors">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Saved Links</h3>
-              <span className="text-2xl">🔗</span>
+              <h3 className="text-sm font-medium text-muted-foreground">Energy Level</h3>
+              <span className="text-2xl">⚡</span>
             </div>
-            <p className="text-3xl font-bold text-secondary">{recentLinks.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">recent resources</p>
+            <p className="text-3xl font-bold text-indigo-400">
+              {currentEnergy !== null ? `${currentEnergy}/10` : "No data"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentEnergy && currentEnergy <= 3 ? "Recovery Mode Active" : "Performance Mode"}
+            </p>
           </div>
         </div>
 

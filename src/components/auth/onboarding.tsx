@@ -54,7 +54,7 @@ export const Onboarding = () => {
                                 Focus on what <br /> matters most.
                             </h1>
                             <p className="text-lg text-white/40 max-w-2xl mx-auto" style={{ color: theme.colors.textDark.secondary }}>
-                                CrowdLens is an AI-powered workspace that helps you track habits, manage time, and optimize your creative energy.
+                                TaskStack is an AI-powered workspace that helps you track habits, manage time, and optimize your creative energy.
                             </p>
                         </div>
 
@@ -75,11 +75,10 @@ export const Onboarding = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-12 max-w-4xl mx-auto">
                             {[
                                 { icon: Zap, title: "AI Driven", desc: "Automate your workflows with AI" },
                                 { icon: ShieldCheck, title: "Persistent", desc: "Your data stays synced forever" },
-                                { icon: Sparkles, title: "Premium", desc: "Curated aesthetic for deep focus" }
                             ].map((feature, i) => (
                                 <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-2xl text-left hover:border-primary/30 transition-colors" style={{ borderColor: `${theme.colors.primary.blue}33` }}>
                                     <feature.icon className="w-8 h-8 mb-4" style={{ color: theme.colors.primary.blue }} />

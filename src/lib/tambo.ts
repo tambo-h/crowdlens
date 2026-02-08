@@ -89,7 +89,7 @@ export const tools: TamboTool[] = [
     description: "Get a random inspirational quote for developers.",
     tool: getInspirationalQuote,
     inputSchema: z.object({ category: z.enum(["technology", "productivity", "motivation"]).optional() }),
-    outputSchema: z.object({ quote: z.string(), author: z.string(), category: z.string() }),
+    outputSchema: z.object({ text: z.string(), author: z.string(), category: z.string() }),
   },
   {
     name: "getPomodoroStats",
@@ -187,7 +187,7 @@ export const tools: TamboTool[] = [
     name: "saveQuote",
     description: "Save a new inspirational quote.",
     tool: saveQuote as any,
-    inputSchema: z.object({ quote: z.string(), author: z.string(), category: z.string() }),
+    inputSchema: z.object({ text: z.string(), author: z.string(), category: z.string() }),
     outputSchema: z.any(),
   },
   {

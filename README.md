@@ -44,9 +44,8 @@ NEXT_PUBLIC_TAMBO_URL=
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# OpenRouter (required for AI workspace setup + challenge expansion)
+# OpenRouter (optional; used for AI workspace setup + challenge expansion; see Notes below)
 OPENROUTER_API_KEY=...
-# The app will still start without this, but those AI flows will fail.
 ```
 
 Notes:

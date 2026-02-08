@@ -2,7 +2,7 @@
 
 TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, creative tools, and more) with an AI side panel that can call server-side tools and render interactive UI components.
 
-> **Security note:** The current “workspace PIN” model is for local/demo use only. Don’t deploy publicly without real authentication/authorization.
+> **Security note:** The current “workspace PIN” model is for local/demo use only. Don’t deploy publicly without real authentication/authorization. See **Project notes / known limitations** below for details.
 
 ## What’s in the app
 
@@ -55,7 +55,7 @@ Notes:
 - You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
 - You can create an OpenRouter API key here: https://openrouter.ai/keys
 - Minimum setup is Tambo + Upstash Redis; OpenRouter is only needed for AI workspace setup and challenge expansion.
-- If `OPENROUTER_API_KEY` is missing, those AI actions will fail when invoked.
+- If `OPENROUTER_API_KEY` is missing, AI workspace setup and challenge expansion will fail when invoked, but non-AI productivity features will continue to work.
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -97,9 +97,8 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 
 ## Project notes / known limitations
 
-- “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys. Anyone with the PIN can access the workspace.
+- **Warning:** This app uses an MVP-level “workspace PIN” model stored client-side in `localStorage` and scoped only by the PIN. Anyone who knows a PIN can read and modify all data for that workspace.
 - Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
-- Because Redis keys are scoped only by the workspace PIN, anyone who knows a PIN can read and modify all data for that workspace.
 - This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.

@@ -4,7 +4,7 @@ TaskStack is a developer-focused “productivity OS” built with **Next.js 15**
 
 TaskStack was previously called CrowdLens.
 
-> **Security note:** The current “workspace PIN” model is for local/demo use only. Don’t deploy publicly without real authentication/authorization. See **Project notes / known limitations** below for details.
+> **Security note:** This app is designed for local/demo use only. The current “workspace PIN” model and server actions lack real authentication/authorization and are not safe for production (or any environment with real user data). See **Project notes / known limitations** below for details.
 
 ## What’s in the app
 
@@ -25,7 +25,7 @@ TaskStack was previously called CrowdLens.
 - Node.js (this repo uses `npm` via `package-lock.json`)
 - A **Tambo** API key (set as `NEXT_PUBLIC_TAMBO_API_KEY`)
 - **Upstash Redis** credentials
-- An **OpenRouter** API key (only required for AI workspace setup + challenge expansion)
+- An **OpenRouter** API key (optional; see Notes below)
 
 ### 1) Install dependencies
 
@@ -48,7 +48,7 @@ NEXT_PUBLIC_TAMBO_URL=
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# OpenRouter (optional; used for AI workspace setup + challenge expansion; see Notes below)
+# OpenRouter (optional; see Notes below)
 OPENROUTER_API_KEY=...
 ```
 
@@ -104,7 +104,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 - This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.
-- For production use, replace the workspace PIN model with real auth and add authorization checks for all server actions/tools.
+- For production use, replace the workspace PIN model with real authentication (OAuth/OIDC or a managed auth provider), store user/workspace identity server-side, and add authorization checks for all server actions/tools.
 
 ## Scripts
 

@@ -2,12 +2,14 @@
 
 import React from "react";
 import { MessageThreadFull } from "./message-thread-full";
-import { ChevronRight, ChevronLeft, MessageSquare, X } from "lucide-react";
+import { ThreadHistory, ThreadHistoryHeader, ThreadHistoryList, ThreadHistoryNewButton, ThreadHistorySearch } from "./thread-history";
+import { ChevronRight, ChevronLeft, MessageSquare, X, History } from "lucide-react";
 import { useProductivity } from "@/context/productivity-context";
 import { cn } from "@/lib/utils";
 
 export function ChatSidePanel() {
     const { isChatOpen, setIsChatOpen } = useProductivity();
+    const [showHistory, setShowHistory] = React.useState(false);
 
     return (
         <>
@@ -29,7 +31,7 @@ export function ChatSidePanel() {
             <div
                 className={cn(
                     "fixed top-0 right-0 h-full z-50 transition-all duration-500 ease-in-out border-l border-border bg-card shadow-2xl overflow-hidden flex flex-col",
-                    isChatOpen ? "w-[30%] opacity-100" : "w-0 opacity-0"
+                    isChatOpen ? "w-[35%] opacity-100" : "w-0 opacity-0"
                 )}
             >
                 {/* Panel Header */}
@@ -48,6 +50,16 @@ export function ChatSidePanel() {
                     </div>
                     <div className="flex items-center gap-1">
                         <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                showHistory ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                            title="Toggle history"
+                        >
+                            <History className="w-4 h-4" />
+                        </button>
+                        <button
                             onClick={() => setIsChatOpen(false)}
                             className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                             title="Close panel"
@@ -57,9 +69,23 @@ export function ChatSidePanel() {
                     </div>
                 </div>
 
-                {/* Chat Thread */}
-                <div className="flex-1 overflow-hidden">
-                    <MessageThreadFull hideHeader />
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Thread History Sidebar */}
+                    {showHistory && (
+                        <div className="w-64 border-r border-border animate-in slide-in-from-left duration-300">
+                            <ThreadHistory defaultCollapsed={false} className="border-none">
+                                <ThreadHistoryHeader />
+                                <ThreadHistoryNewButton className="w-full" />
+                                <ThreadHistorySearch />
+                                <ThreadHistoryList />
+                            </ThreadHistory>
+                        </div>
+                    )}
+
+                    {/* Chat Thread */}
+                    <div className="flex-1 overflow-hidden">
+                        <MessageThreadFull hideHeader />
+                    </div>
                 </div>
             </div>
         </>

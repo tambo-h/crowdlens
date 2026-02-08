@@ -90,6 +90,17 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
     }
   };
 
+  const getSafeHostname = (urlStr: string) => {
+    try {
+      if (!urlStr) return "link";
+      // Handle cases where URL might not have protocol
+      const normalizedUrl = urlStr.includes("://") ? urlStr : `https://${urlStr}`;
+      return new URL(normalizedUrl).hostname;
+    } catch (e) {
+      return "resource";
+    }
+  };
+
   const linksToDisplay = links.length > 0 ? links : (Array.isArray(initialLinks) ? initialLinks : []);
 
   if (isLoading && links.length === 0) {
@@ -144,7 +155,7 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
               <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-auto">
                 <span className="flex items-center gap-1">
                   <ExternalLink className="w-3 h-3" />
-                  {new URL(link.url).hostname}
+                  {getSafeHostname(link.url)}
                 </span>
                 <span>{formatDate(link.savedAt)}</span>
               </div>

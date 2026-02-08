@@ -3,7 +3,7 @@
 import React from "react";
 import { CodeSnippets, Snippet } from "./index";
 import { z } from "zod";
-import { Code, Copy, Search, Plus, Tag, ChevronDown, ChevronUp } from "lucide-react";
+import { Code, Copy, Search, Plus, Tag, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCodeSnippetsContext } from "./code-snippets-context";
 
@@ -133,13 +133,25 @@ const SnippetInner = () => {
                                                     {item.language}
                                                 </span>
                                             </div>
-                                            <button
-                                                onClick={() => copyToClipboard(item.code)}
-                                                className="p-1.5 text-muted-foreground hover:text-primary transition-colors hover:bg-primary/5 rounded-md"
-                                                title="Copy code"
-                                            >
-                                                <Copy className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => copyToClipboard(item.code)}
+                                                    className="p-1.5 text-muted-foreground hover:text-primary transition-colors hover:bg-primary/5 rounded-md"
+                                                    title="Copy code"
+                                                >
+                                                    <Copy className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const { deleteSnippet } = useCodeSnippetsContext();
+                                                        deleteSnippet(item.id);
+                                                    }}
+                                                    className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors hover:bg-red-500/5 rounded-md"
+                                                    title="Delete snippet"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="p-4 bg-background/50 relative">
                                             <pre className="text-xs font-mono overflow-x-auto whitespace-pre text-muted-foreground pr-8">

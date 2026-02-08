@@ -64,9 +64,9 @@ export function ProductivityDashboard({
   };
 
   const {
-    userName = initialUserName || "Developer",
+    userName = initialUserName || "User",
     pomodoroSessionsToday,
-    challengesCompletedToday,
+    challengesCompleted,
     totalChallenges,
     currentStreak,
     recentLinks,
@@ -112,10 +112,10 @@ export function ProductivityDashboard({
               <span className="text-2xl">🎯</span>
             </div>
             <p className="text-3xl font-bold text-accent">
-              {challengesCompletedToday}/{totalChallenges}
+              {challengesCompleted}/{totalChallenges}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalChallenges > 0 ? Math.round((challengesCompletedToday / totalChallenges) * 100) : 0}% complete
+              {totalChallenges > 0 ? Math.round((challengesCompleted / totalChallenges) * 100) : 0}% complete
             </p>
           </div>
 

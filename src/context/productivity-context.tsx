@@ -81,29 +81,31 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     // Load userId from localStorage on mount
     useEffect(() => {
-        const storedId = localStorage.getItem("taskstack_user_id");
+        const storedId = localStorage.getItem("taskstack_pin_id");
         if (storedId) {
             setUserId(storedId);
         }
     }, []);
 
+    const triggerCreativeRefresh = useCallback(() => {
+        setCreativeRefreshTrigger(prev => prev + 1);
+    }, []);
+
     // Sync userId to localStorage and seed data
     useEffect(() => {
         if (userId) {
-            localStorage.setItem("taskstack_user_id", userId);
+            localStorage.setItem("taskstack_pin_id", userId);
             // Seed data if this is a new user (or ensure it exists)
             seedProductivityData(userId).then(() => {
                 triggerCreativeRefresh();
             });
         }
-    }, [userId]);
-
-    const triggerCreativeRefresh = useCallback(() => {
-        setCreativeRefreshTrigger(prev => prev + 1);
-    }, []);
+    }, [userId, triggerCreativeRefresh]);
 
     const onboardGuest = useCallback(() => {
-        const guestId = `guest_${Math.random().toString(36).substring(2, 11)}`;
+        // Generate a 6-digit PIN based ID
+        const pin = Math.floor(100000 + Math.random() * 900000).toString();
+        const guestId = `up_${pin}`; // up_ for User PIN
         setUserId(guestId);
     }, []);
 

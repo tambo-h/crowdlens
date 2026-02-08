@@ -109,18 +109,6 @@ function HomeContent() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-          <button
-            onClick={async () => {
-              if (!userId) return;
-              const { seedProductivityData } = await import("@/services/productivity-service");
-              await seedProductivityData(userId);
-              triggerCreativeRefresh();
-              alert("Guest data seeded! Skills, links, and rules reset.");
-            }}
-            className="w-full py-2 px-3 rounded-lg border border-dashed border-primary/30 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
-          >
-            🌱 Seed Guest Data
-          </button>
 
           <ApiKeyCheck>
             <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">

@@ -17,6 +17,7 @@ export const inspirationQuoteSchema = z.object({
 
 import { useProductivity } from "@/context/productivity-context";
 import { getInspirationalQuote, saveQuote } from "@/services/productivity-service";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 type InspirationQuoteProps = z.input<typeof inspirationQuoteSchema>;
 
@@ -31,6 +32,8 @@ export function InspirationQuote({
   const [currentQuote, setCurrentQuote] = useState({ text: initialText, author: initialAuthor, category: initialCategory });
   const [isLoading, setIsLoading] = useState(false);
   const [showAddCustom, setShowAddCustom] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+  const [customQuotes, setCustomQuotes] = useState<any[]>([]);
   const [newQuoteText, setNewQuoteText] = useState("");
   const [newAuthorText, setNewAuthorText] = useState("");
 
@@ -40,11 +43,24 @@ export function InspirationQuote({
     try {
       const q = await getInspirationalQuote(userId, { category: categoryFilter });
       setCurrentQuote({ text: q.text, author: q.author, category: q.category });
+
+      // Fetch custom quotes for management
+      const customPath = await getInspirationalQuote(userId, { category: "custom" });
+      if (Array.isArray(customPath)) setCustomQuotes(customPath);
+      else if (customPath.text && customPath.category === "custom") setCustomQuotes([customPath]);
+      else setCustomQuotes([]);
     } catch (error) {
       console.error("Failed to fetch quote:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteQuote = async (id: string) => {
+    if (!userId || !confirm("Delete this quote?")) return;
+    const { deleteQuote } = await import("@/services/productivity-service");
+    await deleteQuote(userId, id);
+    triggerCreativeRefresh();
   };
 
   useEffect(() => {
@@ -116,28 +132,36 @@ export function InspirationQuote({
         </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-3 mt-10 pt-4 border-t border-primary/10">
-        <button
-          onClick={handleCopy}
-          className="px-4 py-2 text-sm rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-95"
-        >
-          📋 Copy
-        </button>
-        <button
-          onClick={() => fetchNewQuote()}
-          disabled={isLoading}
-          className="px-4 py-2 text-sm rounded-md bg-accent/10 text-accent hover:bg-accent/20 transition-all active:scale-95 disabled:opacity-50"
-        >
-          🔄 New Quote
-        </button>
-        <button
-          onClick={() => setShowAddCustom(!showAddCustom)}
-          className="px-4 py-2 text-sm rounded-md bg-secondary/10 text-secondary hover:bg-secondary/20 transition-all active:scale-95"
-        >
-          ➕ {showAddCustom ? "Cancel" : "Add Custom"}
-        </button>
-      </div>
+      {/* Manage Custom Quotes */}
+      <button
+        onClick={() => setShowManage(!showManage)}
+        className="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary/40 hover:text-primary/60 transition-colors"
+      >
+        {showManage ? "Close Management" : "Manage My Quotes"}
+      </button>
+
+      {showManage && (
+        <div className="mt-4 space-y-2 border-t border-primary/10 pt-4 animate-in fade-in duration-500">
+          {customQuotes.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground italic text-center py-2">No custom quotes yet.</p>
+          ) : (
+            customQuotes.map((q: any) => (
+              <div key={q.id} className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10 group">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="text-[10px] font-medium text-foreground truncate italic">"{q.text}"</p>
+                  <p className="text-[8px] text-muted-foreground">— {q.author}</p>
+                </div>
+                <button
+                  onClick={() => handleDeleteQuote(q.id)}
+                  className="p-1 px-2 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 text-[8px] font-bold uppercase"
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Custom Quote Form */}
       {showAddCustom && (

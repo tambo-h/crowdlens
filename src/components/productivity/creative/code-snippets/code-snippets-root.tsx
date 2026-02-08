@@ -55,6 +55,20 @@ export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRoo
             }
         };
 
+        const deleteSnippet = async (id: string) => {
+            if (!userId || !confirm("Delete this snippet?")) return;
+            setIsLoading(true);
+            try {
+                const { deleteSnippet: deleteService } = await import("@/services/productivity-service");
+                await deleteService(userId, id);
+                setSnippets((prev) => prev.filter(s => s.id !== id));
+            } catch (error) {
+                console.error("Failed to delete snippet:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         const searchSnippets = (query: string) => {
             // In a real app, this might trigger a service call
             console.log("Searching snippets for:", query);
@@ -63,7 +77,7 @@ export const CodeSnippetsRoot = React.forwardRef<HTMLDivElement, CodeSnippetsRoo
         const Comp = asChild ? Slot : "div";
 
         return (
-            <CodeSnippetsContext.Provider value={{ snippets, isLoading, saveSnippet, searchSnippets }}>
+            <CodeSnippetsContext.Provider value={{ snippets, isLoading, saveSnippet, deleteSnippet, searchSnippets }}>
                 <Comp ref={ref} {...props}>
                     {children}
                 </Comp>

@@ -13,6 +13,7 @@ export interface CodeSnippetsContextValue {
     snippets: Snippet[];
     isLoading: boolean;
     saveSnippet: (title: string, code: string, language: string, tags: string[]) => Promise<void>;
+    deleteSnippet: (id: string) => Promise<void>;
     searchSnippets: (query: string) => void;
 }
 

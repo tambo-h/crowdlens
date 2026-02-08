@@ -10,9 +10,9 @@ import { z } from "zod";
 export const productivityDashboardSchema = z.object({
   userName: z.string().default("Developer").describe("User's name for personalized greeting"),
   pomodoroSessionsToday: z.number().default(0).describe("Number of pomodoro sessions completed today"),
-  habitsCompletedToday: z.number().default(0).describe("Number of habits completed today"),
-  totalHabits: z.number().default(0).describe("Total number of habits tracked"),
-  currentStreak: z.number().default(0).describe("Current habit streak"),
+  challengesCompletedToday: z.number().default(0).describe("Number of challenges completed today"),
+  totalChallenges: z.number().default(0).describe("Total number of challenges tracked"),
+  currentStreak: z.number().default(0).describe("Current skill streak"),
   recentLinks: z.array(
     z.object({
       title: z.string(),
@@ -39,7 +39,7 @@ export function ProductivityDashboard({
   userName: initialUserName,
   ...initialStats
 }: ProductivityDashboardProps) {
-  const { pomodoro, habits, userId, currentEnergy, creativeRefreshTrigger } = useProductivity();
+  const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger } = useProductivity();
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
@@ -56,9 +56,9 @@ export function ProductivityDashboard({
 
   const dashboardData = stats || {
     pomodoroSessionsToday: pomodoro.sessionsCompleted,
-    habitsCompletedToday: habits.filter(h => h.completedToday).length,
-    totalHabits: habits.length,
-    currentStreak: habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0,
+    challengesCompletedToday: challenges.filter(c => c.completed).length,
+    totalChallenges: challenges.length,
+    currentStreak: 0, // Streak logic disabled for now
     recentLinks: [],
     quote: { text: "Loading inspiration...", author: "TaskStack" }
   };
@@ -66,8 +66,8 @@ export function ProductivityDashboard({
   const {
     userName = initialUserName || "Developer",
     pomodoroSessionsToday,
-    habitsCompletedToday,
-    totalHabits,
+    challengesCompletedToday,
+    totalChallenges,
     currentStreak,
     recentLinks,
     quote,
@@ -105,17 +105,17 @@ export function ProductivityDashboard({
             </p>
           </div>
 
-          {/* Habits Stats */}
+          {/* Skill Stats */}
           <div className="bg-card rounded-xl p-6 border border-border hover:border-accent/50 transition-colors">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Habits Today</h3>
-              <span className="text-2xl">✅</span>
+              <h3 className="text-sm font-medium text-muted-foreground">Skills Mastery</h3>
+              <span className="text-2xl">🎯</span>
             </div>
             <p className="text-3xl font-bold text-accent">
-              {habitsCompletedToday}/{totalHabits}
+              {challengesCompletedToday}/{totalChallenges}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0}% complete
+              {totalChallenges > 0 ? Math.round((challengesCompletedToday / totalChallenges) * 100) : 0}% complete
             </p>
           </div>
 
@@ -168,7 +168,7 @@ export function ProductivityDashboard({
                 >
                   <h4 className="font-medium text-foreground mb-1">{link.title}</h4>
                   <div className="flex gap-2 flex-wrap">
-                    {link.tags.map((tag: string, tagIdx: number) => (
+                    {link.tags?.map((tag: string, tagIdx: number) => (
                       <span
                         key={tagIdx}
                         className="px-2 py-0.5 text-xs rounded-md bg-primary/20 text-primary"
@@ -190,8 +190,8 @@ export function ProductivityDashboard({
             <span className="text-sm font-medium text-primary">Start Pomodoro</span>
           </button>
           <button className="p-4 rounded-xl bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-colors text-center">
-            <span className="text-3xl block mb-2">✅</span>
-            <span className="text-sm font-medium text-accent">Check Habits</span>
+            <span className="text-3xl block mb-2">🏆</span>
+            <span className="text-sm font-medium text-accent">Skill Track</span>
           </button>
           <button className="p-4 rounded-xl bg-secondary/10 border border-secondary/20 hover:bg-secondary/20 transition-colors text-center">
             <span className="text-3xl block mb-2">🔗</span>

@@ -15,7 +15,7 @@ import { z } from "zod";
 
 // ProductivityFlow Components
 import { PomodoroTimer, pomodoroTimerSchema } from "@/components/productivity/pomodoro-timer";
-import { HabitTracker, habitTrackerSchema } from "@/components/productivity/habit-tracker";
+import { InteractableSkillTracker, skillTrackerSchema } from "@/components/productivity/skill-tracker";
 import { InspirationQuote, inspirationQuoteSchema } from "@/components/productivity/inspiration-quote";
 import { ProductivityDashboard, productivityDashboardSchema } from "@/components/productivity/productivity-dashboard";
 import { LinkCard, linkCardSchema } from "@/components/productivity/link-card";
@@ -31,18 +31,23 @@ import { StyledWeeklyReview, weeklyReviewSchema } from "@/components/productivit
 // ProductivityFlow Services
 import {
   getProductivityDashboard,
-  getHabits,
+  getChallenges,
   getSavedLinks,
   getInspirationalQuote,
   getPomodoroStats,
   startPomodoroSession,
-  toggleHabit,
-  saveHabit,
+  toggleChallenge,
+  saveChallenge,
+  deleteChallenge,
   saveLink,
+  updateLink,
+  deleteLink,
   logDistraction,
   getDistractions,
   saveSnippet,
   getSnippets,
+  updateSnippet,
+  deleteSnippet,
   saveStandupEntry,
   getStandupHistory,
   logEnergyLevel,
@@ -52,34 +57,42 @@ import {
   getPracticedRules,
   togglePracticedRule,
   saveQuote,
+  updateQuote,
+  deleteQuote,
   seedProductivityData,
-  batchSaveHabits,
+  batchSaveChallenges,
   batchSaveLinks,
   setupPersonalizedWorkspace,
 } from "@/services/productivity-service";
-import { generatePersonalizedData } from "@/services/ai-service";
+import { generatePersonalizedData, generateChallengeDetails } from "@/services/ai-service";
 
 export const tools: TamboTool[] = [
   {
     name: "getProductivityDashboard",
-    description: "Get comprehensive productivity dashboard data including pomodoro sessions, habits, links, and daily quote",
+    description: "Get comprehensive productivity dashboard data including pomodoro sessions, skill challenges, links, and daily quote",
     tool: getProductivityDashboard as any,
     inputSchema: z.object({ userId: z.string().optional() }),
     outputSchema: z.object({
       pomodoroSessionsToday: z.number(),
-      habitsCompletedToday: z.number(),
-      totalHabits: z.number(),
+      challengesCompletedToday: z.number(),
+      totalChallenges: z.number(),
       currentStreak: z.number(),
       recentLinks: z.array(z.object({ title: z.string(), url: z.string(), tags: z.array(z.string()) })),
       quote: z.object({ text: z.string(), author: z.string() }),
     }),
   },
   {
-    name: "getHabits",
-    description: "Get user's habits with completion status and streak information. Can filter by category.",
-    tool: getHabits,
-    inputSchema: z.object({ userId: z.string().optional(), category: z.string().optional() }),
-    outputSchema: z.array(z.object({ id: z.string(), name: z.string(), category: z.enum(["Code", "Learn", "Health", "Review"]), streak: z.number(), completedToday: z.boolean() })),
+    name: "getChallenges",
+    description: "Get user's skill challenges with completion status and detailed steps. Can filter by role.",
+    tool: getChallenges as any,
+    inputSchema: z.object({ userId: z.string().optional(), role: z.string().optional() }),
+    outputSchema: z.array(z.object({
+      id: z.string(),
+      title: z.string(),
+      completed: z.boolean(),
+      role: z.string(),
+      steps: z.array(z.object({ id: z.string(), title: z.string(), completed: z.boolean() }))
+    })),
   },
   {
     name: "getSavedLinks",
@@ -110,17 +123,31 @@ export const tools: TamboTool[] = [
     outputSchema: z.any(),
   },
   {
-    name: "toggleHabit",
-    description: "Mark a habit as complete or incomplete.",
-    tool: toggleHabit as any,
-    inputSchema: z.object({ habitId: z.string(), completed: z.boolean() }),
+    name: "toggleChallenge",
+    description: "Mark a challenge or a specific step as complete/incomplete.",
+    tool: toggleChallenge as any,
+    inputSchema: z.object({ challengeId: z.string(), completed: z.boolean().optional(), stepId: z.string().optional() }),
     outputSchema: z.any(),
   },
   {
-    name: "saveHabit",
-    description: "Create a new habit to track.",
-    tool: saveHabit as any,
-    inputSchema: z.object({ name: z.string(), category: z.enum(["Code", "Learn", "Health", "Review"]) }),
+    name: "saveChallenge",
+    description: "Create a new skill challenge.",
+    tool: saveChallenge as any,
+    inputSchema: z.object({ title: z.string(), role: z.string(), steps: z.array(z.object({ title: z.string() })).optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "generateChallengeDetails",
+    description: "Generate detailed steps and resources for a specific challenge using AI.",
+    tool: generateChallengeDetails as any,
+    inputSchema: z.object({ challengeTitle: z.string(), role: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "deleteChallenge",
+    description: "Delete a skill challenge.",
+    tool: deleteChallenge as any,
+    inputSchema: z.object({ challengeId: z.string() }),
     outputSchema: z.any(),
   },
   {
@@ -129,6 +156,20 @@ export const tools: TamboTool[] = [
     tool: saveLink as any,
     inputSchema: z.object({ url: z.string(), title: z.string(), tags: z.array(z.string()), notes: z.string().optional() }),
     outputSchema: z.object({ id: z.string(), url: z.string(), title: z.string(), tags: z.array(z.string()), notes: z.string().optional(), savedAt: z.string() }),
+  },
+  {
+    name: "updateLink",
+    description: "Update an existing link's title, tags, or notes.",
+    tool: updateLink as any,
+    inputSchema: z.object({ linkId: z.string(), title: z.string().optional(), url: z.string().optional(), tags: z.array(z.string()).optional(), notes: z.string().optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "deleteLink",
+    description: "Remove a link from the collection.",
+    tool: deleteLink as any,
+    inputSchema: z.object({ linkId: z.string() }),
+    outputSchema: z.any(),
   },
   // Creative Tools
   {
@@ -150,6 +191,20 @@ export const tools: TamboTool[] = [
     description: "Save a reusable code snippet.",
     tool: saveSnippet as any,
     inputSchema: z.object({ title: z.string(), code: z.string(), language: z.string(), tags: z.array(z.string()).optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "updateSnippet",
+    description: "Update an existing code snippet.",
+    tool: updateSnippet as any,
+    inputSchema: z.object({ snippetId: z.string(), title: z.string().optional(), code: z.string().optional(), language: z.string().optional(), tags: z.array(z.string()).optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "deleteSnippet",
+    description: "Delete a code snippet.",
+    tool: deleteSnippet as any,
+    inputSchema: z.object({ snippetId: z.string() }),
     outputSchema: z.any(),
   },
   {
@@ -195,6 +250,20 @@ export const tools: TamboTool[] = [
     outputSchema: z.any(),
   },
   {
+    name: "updateQuote",
+    description: "Update a custom inspirational quote.",
+    tool: updateQuote as any,
+    inputSchema: z.object({ quoteId: z.string(), text: z.string().optional(), author: z.string().optional(), category: z.string().optional() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "deleteQuote",
+    description: "Delete a custom inspirational quote.",
+    tool: deleteQuote as any,
+    inputSchema: z.object({ quoteId: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
     name: "seedProductivityData",
     description: "Seed the database with example habits and data for a guest user.",
     tool: seedProductivityData,
@@ -223,10 +292,10 @@ export const components: TamboComponent[] = [
     propsSchema: pomodoroTimerSchema,
   },
   {
-    name: "HabitTracker",
-    description: "Habit tracking with completion status and streaks.",
-    component: HabitTracker,
-    propsSchema: habitTrackerSchema,
+    name: "SkillTracker",
+    description: "Displays and manages user skill challenges and learning steps.",
+    component: InteractableSkillTracker,
+    propsSchema: skillTrackerSchema,
   },
   {
     name: "InspirationQuote",

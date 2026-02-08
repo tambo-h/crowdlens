@@ -7,11 +7,46 @@
 
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
-import { generatePersonalizedData } from "./ai-service";
+import { generatePersonalizedData, generateChallengeDetails } from "./ai-service";
+
+/**
+ * Expand a challenge using AI to generate steps and resources
+ */
+export async function expandChallenge(userId: string, challengeId: string): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const challenge = challenges.find(c => c.id === challengeId);
+
+  if (!challenge) throw new Error("Challenge not found");
+
+  // 1. Generate details via AI
+  const expansion = await generateChallengeDetails(challenge.title, challenge.role);
+
+  // 2. Map steps to include IDs
+  const steps = expansion.steps.map((s, i) => ({
+    id: `s_${Date.now()}_${i}`,
+    title: s.title,
+    completed: false
+  }));
+
+  // 3. Update the challenge in the list
+  const updatedChallenges = challenges.map(c =>
+    c.id === challengeId ? { ...c, steps, resources: expansion.resources } : c
+  );
+
+  await redis.set(keys.skills, updatedChallenges);
+
+  // 4. Sync resources to the global links section
+  if (expansion.resources && expansion.resources.length > 0) {
+    await batchSaveLinks(userId, expansion.resources);
+  }
+
+  return { success: true, steps, resources: expansion.resources };
+}
 
 // Helper to get user-specific keys
 const getKeys = (userId: string) => ({
-  habits: `habits:${userId}`,
+  skills: `skills:${userId}`,
   links: `links:${userId}`,
   pomodoro: `pomodoro:${userId}`,
   distractions: `distractions:${userId}`,
@@ -25,13 +60,22 @@ const getKeys = (userId: string) => ({
   setup_draft: `setup_draft:${userId}`,
 });
 
-export interface Habit {
+export interface ChallengeStep {
   id: string;
-  name: string;
-  category: "Code" | "Learn" | "Health" | "Review";
-  streak: number;
-  completedToday: boolean;
-  lastCompletedAt?: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  steps: ChallengeStep[];
+  resources: { title: string; url: string; tags: string[] }[];
+  role: string;
+  order: number;
+  completedAt?: string;
 }
 
 /**
@@ -39,88 +83,107 @@ export interface Habit {
  */
 export async function getProductivityDashboard(userId: string): Promise<any> {
   const keys = getKeys(userId);
-  const habits = await getHabits(userId);
+  const challenges = await getChallenges(userId);
   const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
 
   return {
     pomodoroSessionsToday: Number(sessions),
-    habitsCompletedToday: habits.filter(h => h.completedToday).length,
-    totalHabits: habits.length,
-    currentStreak: habits.length > 0 ? Math.max(...habits.map(h => h.streak)) : 0,
+    challengesCompleted: challenges.filter(c => c.completed).length,
+    totalChallenges: challenges.length,
+    activeRole: challenges.length > 0 ? challenges[0].role : "General",
     recentLinks: await getSavedLinks(userId, { limit: 3 }),
     quote: await getInspirationalQuote(userId, {}),
   };
 }
 
 /**
- * Get user's habits from Redis
+ * Get user's challenges from Redis
  */
-export async function getHabits(userId: string, input: { category?: string } = {}): Promise<Habit[]> {
+export async function getChallenges(userId: string, input: { role?: string } = {}): Promise<Challenge[]> {
   const keys = getKeys(userId);
-  const habits = await redis.get<Habit[]>(keys.habits) || [];
+  const challenges = await redis.get<Challenge[]>(keys.skills) || [];
 
-  if (input.category) return habits.filter((h) => h.category === input.category);
-  return habits;
+  if (input.role) return challenges.filter((c) => c.role === input.role);
+  return challenges.sort((a, b) => a.order - b.order);
 }
 
 /**
- * Toggle habit completion and persist to Redis
+ * Toggle challenge completion or step completion
  */
-export async function toggleHabit(userId: string, input: { habitId: string, completed: boolean }): Promise<any> {
+export async function toggleChallenge(userId: string, input: { challengeId: string, completed?: boolean, stepId?: string }): Promise<any> {
   const keys = getKeys(userId);
-  const habits = await getHabits(userId);
-  const updatedHabits = habits.map(h => {
-    if (h.id === input.habitId) {
-      const newStreak = input.completed ? h.streak + 1 : Math.max(0, h.streak - 1);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.map(c => {
+    if (c.id === input.challengeId) {
+      if (input.stepId) {
+        const updatedSteps = c.steps.map(s => s.id === input.stepId ? { ...s, completed: !s.completed } : s);
+        const allDone = updatedSteps.every(s => s.completed);
+        return { ...c, steps: updatedSteps, completed: allDone, completedAt: allDone ? new Date().toISOString() : undefined };
+      }
       return {
-        ...h,
-        completedToday: input.completed,
-        streak: newStreak,
-        lastCompletedAt: input.completed ? new Date().toISOString() : h.lastCompletedAt
+        ...c,
+        completed: input.completed ?? !c.completed,
+        completedAt: (input.completed ?? !c.completed) ? new Date().toISOString() : undefined,
+        steps: c.steps.map(s => ({ ...s, completed: input.completed ?? !c.completed }))
       };
     }
-    return h;
+    return c;
   });
 
-  await redis.set(keys.habits, updatedHabits);
+  await redis.set(keys.skills, updated);
   return { success: true };
 }
 
 /**
- * Save new habit (called by AI)
+ * Save new challenge (Can be called by user or AI)
  */
-export async function saveHabit(userId: string, habit: Omit<Habit, "id" | "streak" | "completedToday">): Promise<Habit> {
+export async function saveChallenge(userId: string, challenge: Omit<Challenge, "id">): Promise<Challenge> {
   const keys = getKeys(userId);
-  const habits = await getHabits(userId);
-  const newHabit: Habit = {
-    ...habit,
-    id: `h_${Date.now()}`,
-    streak: 0,
-    completedToday: false
+  const challenges = await getChallenges(userId);
+  const newChallenge: Challenge = {
+    ...challenge,
+    id: `c_${Date.now()}`,
+    completed: false,
+    steps: challenge.steps || [],
+    resources: challenge.resources || [],
+    order: challenge.order ?? challenges.length
   };
-  await redis.set(keys.habits, [newHabit, ...habits]);
-  return newHabit;
+  await redis.set(keys.skills, [newChallenge, ...challenges]);
+  return newChallenge;
 }
 
 /**
- * Bulk save habits (called by AI onboarding)
+ * Bulk save challenges (called by AI onboarding)
  */
-export async function batchSaveHabits(userId: string, habitsToSave: Omit<Habit, "id" | "streak" | "completedToday">[] = []): Promise<any> {
+export async function batchSaveChallenges(userId: string, challengesToSave: Omit<Challenge, "id">[] = []): Promise<any> {
   const keys = getKeys(userId);
-  const existing = await getHabits(userId);
-  const newHabits: Habit[] = (habitsToSave || []).map((h, i) => ({
-    ...h,
-    id: `ah_${Date.now()}_${i}`,
-    streak: 0,
-    completedToday: false
+  const existing = await getChallenges(userId);
+  const newChallenges: Challenge[] = (challengesToSave || []).map((c, i) => ({
+    ...c,
+    id: `ac_${Date.now()}_${i}`,
+    completed: false,
+    steps: c.steps || [],
+    resources: c.resources || [],
+    order: existing.length + i
   }));
-  await redis.set(keys.habits, [...newHabits, ...existing]);
-  return { success: true, count: newHabits.length };
+  await redis.set(keys.skills, [...newChallenges, ...existing]);
+  return { success: true, count: newChallenges.length };
 }
 
 /**
  * Get saved links
  */
+/**
+ * Delete a challenge
+ */
+export async function deleteChallenge(userId: string, challengeId: string): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const filtered = challenges.filter(c => c.id !== challengeId);
+  await redis.set(keys.skills, filtered);
+  return { success: true };
+}
+
 export async function getSavedLinks(userId: string, input: { limit?: number } = {}): Promise<any[]> {
   const keys = getKeys(userId);
   const links = await redis.get<any[]>(keys.links) || [];
@@ -138,6 +201,22 @@ export async function saveLink(userId: string, input: { url: string, title: stri
   return newLink;
 }
 
+export async function updateLink(userId: string, linkId: string, input: any): Promise<any> {
+  const keys = getKeys(userId);
+  const links = await getSavedLinks(userId);
+  const updated = links.map(l => l.id === linkId ? { ...l, ...input } : l);
+  await redis.set(keys.links, updated);
+  return { success: true };
+}
+
+export async function deleteLink(userId: string, linkId: string): Promise<any> {
+  const keys = getKeys(userId);
+  const links = await getSavedLinks(userId);
+  const filtered = links.filter(l => l.id !== linkId);
+  await redis.set(keys.links, filtered);
+  return { success: true };
+}
+
 /**
  * Bulk save links (called by AI onboarding)
  */
@@ -146,6 +225,7 @@ export async function batchSaveLinks(userId: string, linksToSave: { title: strin
   const existing = await getSavedLinks(userId);
   const newLinks = (linksToSave || []).map((l, i) => ({
     ...l,
+    tags: l.tags || [],
     id: `al_${Date.now()}_${i}`,
     savedAt: new Date().toISOString()
   }));
@@ -188,6 +268,22 @@ export async function saveQuote(userId: string, input: { text: string, author: s
   return newQuote;
 }
 
+export async function updateQuote(userId: string, quoteId: string, input: any) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.quotes) || [];
+  const updated = items.map(i => i.id === quoteId ? { ...i, ...input } : i);
+  await redis.set(keys.quotes, updated);
+  return { success: true };
+}
+
+export async function deleteQuote(userId: string, quoteId: string) {
+  const keys = getKeys(userId);
+  const items = await redis.get<any[]>(keys.quotes) || [];
+  const filtered = items.filter(i => i.id !== quoteId);
+  await redis.set(keys.quotes, filtered);
+  return { success: true };
+}
+
 export async function startPomodoroSession(userId: string, input: any = {}) {
   const keys = getKeys(userId);
   await redis.incr(`${keys.pomodoro}:today`);
@@ -213,6 +309,22 @@ export async function saveSnippet(userId: string, input: { title: string, code: 
   const newItem = { ...input, id: `s_${Date.now()}`, savedAt: new Date().toISOString() };
   await redis.set(keys.snippets, [newItem, ...items]);
   return newItem;
+}
+
+export async function updateSnippet(userId: string, snippetId: string, input: any) {
+  const keys = getKeys(userId);
+  const items = await getSnippets(userId);
+  const updated = items.map(i => i.id === snippetId ? { ...i, ...input } : i);
+  await redis.set(keys.snippets, updated);
+  return { success: true };
+}
+
+export async function deleteSnippet(userId: string, snippetId: string) {
+  const keys = getKeys(userId);
+  const items = await getSnippets(userId);
+  const filtered = items.filter(i => i.id !== snippetId);
+  await redis.set(keys.snippets, filtered);
+  return { success: true };
 }
 
 export async function getSnippets(userId: string, input: any = {}) {
@@ -323,11 +435,18 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     };
   }
 
-  const habits = draft.habits || [];
+  const challenges = draft.habits || [];
   const links = draft.links || [];
-  console.log("[Productivity-Service] Applying setup from draft - Habits:", habits.length, "Links:", links.length);
+  console.log("[Productivity-Service] Applying setup from draft - Challenges:", challenges.length, "Links:", links.length);
 
-  await batchSaveHabits(userId, habits);
+  await batchSaveChallenges(userId, challenges.map((h: any, i: number) => ({
+    title: h.name,
+    completed: false,
+    steps: [],
+    resources: [],
+    role: input.skill,
+    order: i
+  })));
   await batchSaveLinks(userId, links);
 
   // Cleanup
@@ -335,7 +454,7 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
 
   return {
     success: true,
-    message: `Awesome! Your workspace is now optimized for a ${input.skill}. Your new habits and resources have been added.`
+    message: `Awesome! Your workspace is now optimized for a ${input.skill}. Your new skills and resources have been added.`
   };
 }
 
@@ -369,7 +488,7 @@ export async function seedProductivityData(userId: string) {
   await redis.set(keys.is_seeded, true);
 
   // Clear others for fresh user
-  await redis.del(keys.habits);
+  await redis.del(keys.skills);
   await redis.del(keys.links);
   await redis.del(keys.distractions);
   await redis.del(keys.snippets);

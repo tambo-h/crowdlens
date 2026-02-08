@@ -3,15 +3,18 @@
  * @description Service to interact with OpenRouter for personalized content generation
  */
 
-import { Habit } from "./productivity-service";
-
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const MODEL = "qwen/qwen3-coder-next";
 
 export interface GeneratedData {
-    habits: Array<Omit<Habit, "id" | "streak" | "completedToday">>;
+    habits: Array<{ name: string, category: string }>; // Keeping key 'habits' for compatibility with setup draft but changing intent
     links: Array<{ title: string, url: string, tags: string[] }>;
     rules: string[];
+}
+
+export interface ChallengeExpansion {
+    steps: { title: string }[];
+    resources: { title: string, url: string, tags: string[] }[];
 }
 
 export async function generatePersonalizedData(skill: string): Promise<GeneratedData> {
@@ -19,19 +22,19 @@ export async function generatePersonalizedData(skill: string): Promise<Generated
         throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
-    const prompt = `You are a productivity expert. For a ${skill}, provide:
-1. Top 10 habits as an array of objects: { name: string, category: "Code" | "Learn" | "Health" | "Review" }.
-2. 5 high-quality learning resources (links) as an array: { title: string, url: string, tags: string[] }.
-3. 3 "Slow Productivity" rules (deep work rules) for this specific role as an array of strings.
+    const prompt = `You are an expert mentor. For someone who wants to become a world-class ${skill}, provide:
+1. 10 specific, hands-on "Skill Challenges" (e.g., "Build an Angular app with caching").
+2. 5 high-quality learning resources (links).
+3. 3 "Slow Productivity" rules for this role.
 
 Respond ONLY with a JSON object in this format:
 {
-  "habits": [...],
+  "habits": [ { "name": "Challenge Title", "category": "Core" }, ... ],
   "links": [...],
   "rules": [...]
 }
 
-Ensure habit names are concise and categories are exactly as specified.`;
+Make the challenges specific and practical.`;
 
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -54,24 +57,56 @@ Ensure habit names are concise and categories are exactly as specified.`;
         }
 
         const content = data.choices[0].message.content;
-        console.log("[AI-Service] Raw Response content length:", content.length);
-        console.log("[AI-Service] Raw Response Preview:", content.substring(0, 200) + "...");
-
-        // Some models might include markdown code blocks even with response_format
         const jsonStr = content.includes("```")
             ? content.split("```")[1].replace(/^(json|javascript|js)/, "").split("```")[0].trim()
             : content;
 
-        console.log("[AI-Service] Attempting to parse JSON string of length:", jsonStr.length);
         const parsed = JSON.parse(jsonStr) as GeneratedData;
-        console.log("[AI-Service] Success! Generated:", {
-            habits: parsed.habits?.length,
-            links: parsed.links?.length,
-            rules: parsed.rules?.length
-        });
         return parsed;
     } catch (error) {
         console.error("[AI-Service] Critical Failure:", error);
+        throw error;
+    }
+}
+
+export async function generateChallengeDetails(challengeTitle: string, role: string): Promise<ChallengeExpansion> {
+    if (!OPENROUTER_API_KEY) {
+        throw new Error("OPENROUTER_API_KEY is not configured");
+    }
+
+    const prompt = `For the challenge "${challengeTitle}" in the context of being a ${role}, provide:
+1. 3-5 clear, actionable steps to complete it.
+2. 2-3 high-quality direct resource links (URL and title).
+
+Respond ONLY with a JSON object:
+{
+  "steps": [ { "title": "Step 1 description" }, ... ],
+  "resources": [ { "title": "Resource Title", "url": "https://...", "tags": ["learning"] }, ... ]
+}`;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [{ role: "user", content: prompt }],
+                response_format: { type: "json_object" }
+            }),
+        });
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        const jsonStr = content.includes("```")
+            ? content.split("```")[1].replace(/^(json|javascript|js)/, "").split("```")[0].trim()
+            : content;
+
+        return JSON.parse(jsonStr) as ChallengeExpansion;
+    } catch (error) {
+        console.error("[AI-Service] Expansion failure:", error);
         throw error;
     }
 }

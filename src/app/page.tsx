@@ -5,7 +5,7 @@ import React from "react";
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
 import { ProductivityDashboard } from "@/components/productivity/productivity-dashboard";
 import { PomodoroTimer } from "@/components/productivity/pomodoro-timer";
-import { InteractableHabitTracker } from "@/components/productivity/habit-tracker";
+import { InteractableSkillTracker } from "@/components/productivity/skill-tracker";
 import { InspirationQuote } from "@/components/productivity/inspiration-quote";
 import { LinkCard } from "@/components/productivity/link-card";
 import { ProductivityRules } from "@/components/productivity/productivity-rules";
@@ -43,15 +43,15 @@ import { Onboarding } from "@/components/auth/onboarding";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, setIsChatOpen, habits, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   // Auto-open chat for new users to guide onboarding
   React.useEffect(() => {
-    if (userId && habits.length === 0 && !isChatOpen) {
+    if (userId && challenges.length === 0 && !isChatOpen) {
       setIsChatOpen(true);
     }
-  }, [userId, habits.length, setIsChatOpen, isChatOpen]);
+  }, [userId, challenges.length, setIsChatOpen, isChatOpen]);
 
   if (!userId) {
     return <Onboarding />;
@@ -60,7 +60,7 @@ function HomeContent() {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: "pomodoro", label: "Pomodoro", icon: <Timer className="w-4 h-4" /> },
-    { id: "habits", label: "Habits", icon: <CheckSquare className="w-4 h-4" /> },
+    { id: "skills", label: "Skills Track", icon: <CheckSquare className="w-4 h-4" /> },
     { id: "links", label: "Links", icon: <LinkIcon className="w-4 h-4" /> },
     { id: "inspiration", label: "Inspiration", icon: <Lightbulb className="w-4 h-4" /> },
     { id: "rules", label: "Rules", icon: <BookOpen className="w-4 h-4" /> },
@@ -115,7 +115,7 @@ function HomeContent() {
               const { seedProductivityData } = await import("@/services/productivity-service");
               await seedProductivityData(userId);
               triggerCreativeRefresh();
-              alert("Guest data seeded! Habits, links, and rules reset.");
+              alert("Guest data seeded! Skills, links, and rules reset.");
             }}
             className="w-full py-2 px-3 rounded-lg border border-dashed border-primary/30 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
           >
@@ -171,9 +171,9 @@ function HomeContent() {
               <PomodoroTimer />
             </div>
           )}
-          {activeView === "habits" && (
+          {activeView === "skills" && (
             <div className="py-12 flex justify-center">
-              <InteractableHabitTracker />
+              <InteractableSkillTracker />
             </div>
           )}
           {activeView === "links" && (
@@ -214,11 +214,13 @@ const TamboProviderWithContext = () => {
   const augmentedTools = React.useMemo(() => tools.map(t => {
     // All tools that take (userId, input) should be wrapped
     const userIdTools = [
-      "getProductivityDashboard", "getHabits", "getSavedLinks", "getInspirationalQuote",
-      "getPomodoroStats", "startPomodoroSession", "toggleHabit", "saveHabit", "saveLink",
-      "logDistraction", "getDistractions", "saveSnippet", "getSnippets", "saveStandupEntry",
+      "getProductivityDashboard", "getChallenges", "getSavedLinks", "getInspirationalQuote",
+      "getPomodoroStats", "startPomodoroSession", "toggleChallenge", "saveChallenge", "deleteChallenge",
+      "saveLink", "updateLink", "deleteLink", "logDistraction", "getDistractions",
+      "saveSnippet", "getSnippets", "updateSnippet", "deleteSnippet", "saveStandupEntry",
       "logEnergyLevel", "getEnergyData", "saveWeeklyReview", "getWeeklyReviews",
-      "togglePracticedRule", "saveQuote", "seedProductivityData", "setupPersonalizedWorkspace"
+      "togglePracticedRule", "saveQuote", "updateQuote", "deleteQuote",
+      "seedProductivityData", "setupPersonalizedWorkspace", "generateChallengeDetails"
     ];
 
     if (userIdTools.includes(t.name)) {

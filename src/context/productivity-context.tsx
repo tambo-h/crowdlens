@@ -1,8 +1,6 @@
-"use client";
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { HabitTrackerProps } from "@/components/productivity/habit-tracker";
-import { getHabits, toggleHabit as toggleHabitService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData } from "@/services/productivity-service";
+
+import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService } from "@/services/productivity-service";
 
 interface PomodoroState {
     isRunning: boolean;
@@ -21,11 +19,13 @@ interface ProductivityContextType {
     setUserId: React.Dispatch<React.SetStateAction<string | null>>;
     onboardGuest: () => void;
 
-    // Habits
-    habits: any[];
-    isLoadingHabits: boolean;
-    refreshHabits: () => Promise<void>;
-    toggleHabit: (habitId: string, completed: boolean) => Promise<void>;
+    // Challenges / Skills
+    challenges: Challenge[];
+    isLoadingChallenges: boolean;
+    expandingIds: string[];
+    refreshChallenges: () => Promise<void>;
+    toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<void>;
+    expandChallengeDetails: (challengeId: string) => Promise<void>;
 
     // Pomodoro
     pomodoro: PomodoroState;
@@ -33,6 +33,7 @@ interface ProductivityContextType {
     pausePomodoro: () => void;
     resetPomodoro: () => void;
     tickPomodoro: () => void;
+    tickPomodoroRef?: React.MutableRefObject<() => void>;
     updatePomodoroDurations: (work: number, breakD: number, long: number) => void;
 
     // View Management
@@ -48,6 +49,7 @@ interface ProductivityContextType {
     // Energy Awareness
     currentEnergy: number | null;
     refreshCurrentEnergy: () => Promise<void>;
+    logEnergyLevel: (input: { level: number, notes?: string }) => Promise<void>;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -61,9 +63,10 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     // Energy state
     const [currentEnergy, setCurrentEnergy] = useState<number | null>(null);
 
-    // Habits state
-    const [habits, setHabits] = useState<any[]>([]);
-    const [isLoadingHabits, setIsLoadingHabits] = useState(false);
+    // Challenges state
+    const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [isLoadingChallenges, setIsLoadingChallenges] = useState(false);
+    const [expandingIds, setExpandingIds] = useState<string[]>([]);
 
     // Pomodoro state
     const [pomodoro, setPomodoro] = useState<PomodoroState>({
@@ -104,19 +107,19 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         setUserId(guestId);
     }, []);
 
-    const refreshHabits = useCallback(async () => {
+    const refreshChallenges = useCallback(async () => {
         if (!userId) {
-            setIsLoadingHabits(false);
+            setIsLoadingChallenges(false);
             return;
         }
-        setIsLoadingHabits(true);
+        setIsLoadingChallenges(true);
         try {
-            const data = await getHabits(userId);
-            setHabits(data || []);
+            const data = await getChallenges(userId);
+            setChallenges(data || []);
         } catch (err) {
-            console.error("Failed to fetch habits", err);
+            console.error("Failed to fetch challenges", err);
         } finally {
-            setIsLoadingHabits(false);
+            setIsLoadingChallenges(false);
         }
     }, [userId]);
 
@@ -134,28 +137,61 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     }, [userId]);
 
+    const handleLogEnergyLevel = async (input: { level: number, notes?: string }) => {
+        if (!userId) return;
+        await logEnergyService(userId, input);
+        await refreshCurrentEnergy();
+        triggerCreativeRefresh();
+    };
+
     useEffect(() => {
         if (userId) {
-            refreshHabits();
+            refreshChallenges();
             refreshCurrentEnergy();
         }
-    }, [refreshHabits, refreshCurrentEnergy, creativeRefreshTrigger, userId]);
+    }, [refreshChallenges, refreshCurrentEnergy, creativeRefreshTrigger, userId]);
 
-    const handleToggleHabit = async (habitId: string, completed: boolean) => {
+    const handleToggleChallenge = async (challengeId: string, completed?: boolean, stepId?: string) => {
         if (!userId) return;
 
-        // Optimistic update
-        setHabits(prev => prev.map(h =>
-            h.id === habitId ? { ...h, completedToday: completed, streak: completed ? h.streak + 1 : h.streak - 1 } : h
-        ));
+        // Optimistic update for step toggle
+        if (stepId) {
+            setChallenges(prev => prev.map(c => {
+                if (c.id === challengeId) {
+                    const updatedSteps = c.steps.map(s => s.id === stepId ? { ...s, completed: !s.completed } : s);
+                    const allDone = updatedSteps.every(s => s.completed);
+                    return { ...c, steps: updatedSteps, completed: allDone };
+                }
+                return c;
+            }));
+        } else {
+            // Optimistic update for whole challenge toggle
+            setChallenges(prev => prev.map(c =>
+                c.id === challengeId ? { ...c, completed: completed ?? !c.completed } : c
+            ));
+        }
 
         try {
-            await toggleHabitService(userId, { habitId, completed });
+            await toggleChallengeService(userId, { challengeId, completed, stepId });
         } catch (err) {
-            console.error("Failed to toggle habit", err);
-            refreshHabits(); // Rollback
+            console.error("Failed to toggle challenge", err);
+            refreshChallenges(); // Rollback
         }
     };
+
+    const expandChallengeDetails = useCallback(async (challengeId: string) => {
+        if (!userId) return;
+        setExpandingIds(prev => [...prev, challengeId]);
+        try {
+            await expandChallengeService(userId, challengeId);
+            await refreshChallenges();
+            triggerCreativeRefresh(); // Refresh links as well
+        } catch (err) {
+            console.error("Failed to expand challenge", err);
+        } finally {
+            setExpandingIds(prev => prev.filter(id => id !== challengeId));
+        }
+    }, [userId, refreshChallenges, triggerCreativeRefresh]);
 
     const startPomodoro = useCallback(async (props: Partial<PomodoroState>) => {
         if (userId) {
@@ -215,12 +251,12 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     return (
         <ProductivityContext.Provider value={{
-            habits, isLoadingHabits, refreshHabits, toggleHabit: handleToggleHabit,
+            challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,
             userId, setUserId, onboardGuest,
-            currentEnergy, refreshCurrentEnergy
+            currentEnergy, refreshCurrentEnergy, logEnergyLevel: handleLogEnergyLevel
         }}>
             {children}
         </ProductivityContext.Provider>

@@ -60,6 +60,19 @@ const getKeys = (userId: string) => ({
   setup_draft: `setup_draft:${userId}`,
 });
 
+/**
+ * Check if a user/PIN already exists in the system
+ */
+export async function checkUserExistence(userId: string): Promise<boolean> {
+  const keys = getKeys(userId);
+  // If is_seeded or any skills exist, the user exists
+  const isSeeded = await redis.get(keys.is_seeded);
+  if (isSeeded) return true;
+
+  const challenges = await redis.get(keys.skills);
+  return !!challenges;
+}
+
 export interface ChallengeStep {
   id: string;
   title: string;

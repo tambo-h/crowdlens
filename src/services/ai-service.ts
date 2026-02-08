@@ -17,15 +17,15 @@ export interface ChallengeExpansion {
     resources: { title: string, url: string, tags: string[] }[];
 }
 
-export async function generatePersonalizedData(skill: string): Promise<GeneratedData> {
+export async function generatePersonalizedData(skill: string, experienceLevel?: string, projectType?: string): Promise<GeneratedData> {
     if (!OPENROUTER_API_KEY) {
         throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
-    const prompt = `You are an expert mentor. For someone who wants to become a world-class ${skill}, provide:
-1. 10 specific, hands-on "Skill Challenges" (e.g., "Build an Angular app with caching").
+    const prompt = `You are an expert mentor. For a ${experienceLevel || "standard"} ${skill}${projectType ? ` building a ${projectType}` : ""}, provide:
+1. 10 specific, hands-on "Skill Challenges" tailored to this level and project type.
 2. 5 high-quality learning resources (links).
-3. 3 "Slow Productivity" rules for this role.
+3. 3 "Slow Productivity" rules for this specific context.
 
 Respond ONLY with a JSON object in this format:
 {

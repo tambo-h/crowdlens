@@ -40,6 +40,7 @@ import { StyledEnergyMapper } from "@/components/productivity/creative/energy-ma
 import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-review/styled-review";
 
 import { Onboarding } from "@/components/auth/onboarding";
+import { ProfileMenu } from "@/components/auth/profile-menu";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
 
 function HomeContent() {
@@ -146,7 +147,7 @@ function HomeContent() {
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               <Bell className="w-5 h-5" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20" />
+            <ProfileMenu />
           </div>
         </header>
 

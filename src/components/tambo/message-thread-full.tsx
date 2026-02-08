@@ -74,21 +74,27 @@ export const MessageThreadFull = React.forwardRef<
   const defaultSuggestions: Suggestion[] = [
     {
       id: "suggestion-1",
-      title: "Get started",
-      detailedSuggestion: "What can you help me with?",
-      messageId: "welcome-query",
+      title: "Next.js Dev",
+      detailedSuggestion: "setup for Next.js Developer",
+      messageId: "setup-nextjs",
     },
     {
       id: "suggestion-2",
-      title: "Learn more",
-      detailedSuggestion: "Tell me about your capabilities.",
-      messageId: "capabilities-query",
+      title: "Business Analyst",
+      detailedSuggestion: "setup for Business Analyst",
+      messageId: "setup-ba",
     },
     {
       id: "suggestion-3",
-      title: "Examples",
-      detailedSuggestion: "Show me some example queries I can try.",
-      messageId: "examples-query",
+      title: "Project Manager",
+      detailedSuggestion: "setup for Project Manager",
+      messageId: "setup-pm",
+    },
+    {
+      id: "suggestion-4",
+      title: "Track Energy",
+      detailedSuggestion: "How should I track my energy today?",
+      messageId: "energy-query",
     },
   ];
 

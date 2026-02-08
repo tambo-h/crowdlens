@@ -27,6 +27,7 @@ import { StyledCodeSnippets, codeSnippetsSchema } from "@/components/productivit
 import { StyledStandupLog, standupLogSchema } from "@/components/productivity/creative/standup-log/styled-standup";
 import { StyledEnergyMapper, energyMapperSchema } from "@/components/productivity/creative/energy-mapper/styled-mapper";
 import { StyledWeeklyReview, weeklyReviewSchema } from "@/components/productivity/creative/weekly-review/styled-review";
+import { InteractableWorkspacePreview, workspacePreviewSchema } from "@/components/productivity/workspace-preview";
 
 // ProductivityFlow Services
 import {
@@ -350,5 +351,11 @@ export const components: TamboComponent[] = [
     description: "Structured weekly reflection tool.",
     component: StyledWeeklyReview,
     propsSchema: weeklyReviewSchema,
+  },
+  {
+    name: "WorkspacePreview",
+    description: "Visual preview of generated skills and resources for a workspace setup.",
+    component: InteractableWorkspacePreview,
+    propsSchema: workspacePreviewSchema,
   },
 ];

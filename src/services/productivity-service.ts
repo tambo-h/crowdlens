@@ -122,6 +122,8 @@ export async function getProductivityDashboard(userId: string): Promise<any> {
   const keys = getKeys(actualUserId);
   const challenges = await getChallenges(actualUserId);
   const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
+  const energyData = await getEnergyData(actualUserId);
+  const currentEnergy = energyData.length > 0 ? energyData[energyData.length - 1].level : null;
 
   return {
     pomodoroSessionsToday: Number(sessions),
@@ -130,6 +132,7 @@ export async function getProductivityDashboard(userId: string): Promise<any> {
     activeRole: challenges.length > 0 ? challenges[0].role : "General",
     recentLinks: await getSavedLinks(actualUserId, { limit: 3 }),
     quote: await getInspirationalQuote(actualUserId, {}),
+    currentEnergy
   };
 }
 
@@ -385,15 +388,17 @@ export async function getStandupHistory(userId: string, input: any = {}) {
 }
 
 export async function logEnergyLevel(userId: string, input: { level: number, notes?: string }) {
-  const keys = getKeys(userId);
+  const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
+  const keys = getKeys(actualUserId);
   const items = await redis.get<any[]>(keys.energy) || [];
-  const newItem = { ...input, id: `e_${Date.now()}`, timestamp: new Date().toISOString() };
+  const newItem = { ...actualInput, id: `e_${Date.now()}`, timestamp: new Date().toISOString() };
   await redis.set(keys.energy, [newItem, ...items]);
   return newItem;
 }
 
 export async function getEnergyData(userId: string, input: any = {}) {
-  const keys = getKeys(userId);
+  const { userId: actualUserId } = normalizeArgs(userId, input);
+  const keys = getKeys(actualUserId);
   return await redis.get<any[]>(keys.energy) || [];
 }
 
@@ -439,7 +444,7 @@ export async function applyAIPracticedRules(userId: string, rules: string[]): Pr
 /**
  * AI-Driven Workspace Setup
  */
-export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, confirm?: boolean, data?: any }) {
+export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, experienceLevel?: string, projectType?: string, confirm?: boolean, data?: any }) {
   console.log("[Service] setupPersonalizedWorkspace CALLED");
   const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
   console.log("[Service] normalized userId:", actualUserId, "normalized input:", actualInput);
@@ -455,20 +460,53 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
   const keys = getKeys(actualUserId);
 
   if (!actualInput.confirm) {
-    console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill);
-    const generated = await generatePersonalizedData(actualInput.skill);
-    const habitNames = generated.habits.map(h => h.name).join(", ");
+    console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
+    const generated = await generatePersonalizedData(
+      actualInput.skill,
+      actualInput.experienceLevel,
+      actualInput.projectType
+    );
 
     // Store draft in Redis temporarily (expiring in 30 minutes)
     await redis.set(keys.setup_draft, generated, { ex: 1800 });
     console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
 
+    const habitList = (generated.habits || []).map(h => `- **${h.name}**`).slice(0, 5).join("\n");
+    const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
+
     return {
-      message: `I've prepared a personalized setup for a ${actualInput.skill}. Here's a preview:\n\n**Habits**: ${habitNames}\n\n**Resources**: ${generated.links.length} curated links.\n\nShould I apply these to your workspace?`,
+      message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?`,
+      interactive: {
+        name: "WorkspacePreview",
+        props: {
+          role: actualInput.skill,
+          habits: generated.habits || [],
+          links: generated.links || [],
+          rules: generated.rules || []
+        }
+      },
+      render: {
+        name: "WorkspacePreview",
+        props: {
+          role: actualInput.skill,
+          habits: generated.habits || [],
+          links: generated.links || [],
+          rules: generated.rules || []
+        }
+      },
+      component: {
+        name: "WorkspacePreview",
+        props: {
+          role: actualInput.skill,
+          habits: generated.habits || [],
+          links: generated.links || [],
+          rules: generated.rules || []
+        }
+      },
       elicitation: {
         title: "Confirm Workspace Setup",
         fields: [
-          { name: "confirm", type: "boolean", label: "Apply these habits and resources?", required: true }
+          { name: "confirm", type: "boolean", label: `Apply this ${actualInput.experienceLevel || ""} setup?`, required: true }
         ]
       }
     };
@@ -482,7 +520,7 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     console.error("[Productivity-Service] No draft found in Redis for user:", actualUserId);
     return {
       success: false,
-      message: "Setup failed: The session expired or the data was lost. Please try describing your role again."
+      message: `The workspace setup didn’t save because your session expired. Please resend your role (just confirm: “${actualInput.skill}”), and I’ll run the setup again.\n\nIf you want it tailored, add one line with:\n- your **level** (junior/mid/senior)\n- what you’re **building** (SaaS, e-commerce, content site, internal tool).`
     };
   }
 

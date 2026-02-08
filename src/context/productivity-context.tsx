@@ -141,8 +141,8 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         try {
             const data = await getEnergyData(userId);
             if (data && data.length > 0) {
-                // Get the most recent level
-                const latest = data[data.length - 1].level;
+                // Get the most recent level (latest is at index 0 because we prepend)
+                const latest = data[0].level;
                 setCurrentEnergy(latest);
             }
         } catch (err) {

@@ -1,15 +1,17 @@
-# CrowdLens
+# TaskStack
 
-CrowdLens is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, habits, links, weekly review, etc.) with an AI side panel that can call server-side tools and render interactive UI components.
+TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, etc.) with an AI side panel that can call server-side tools and render interactive UI components.
 
 ## What’s in the app
 
-- **Dashboard**: daily overview (Pomodoro count, habit completion, streaks, recent links)
+- **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy)
 - **Pomodoro timer**: sessions tracked in Redis
-- **Habits**: toggle completion + streak tracking
+- **Skills Track**: AI-generated “skill challenges” you can complete and expand into steps + resources
 - **Links**: save / tag / browse useful links
+- **Energy**: log and visualize energy levels; switches to a recovery view when energy is low
 - **Slow Productivity rules**: built-in reference
 - **Creative tools**: distractions journal, code snippets, standup log, energy mapper, weekly review
+- **Workspace onboarding**: create a new workspace (PIN) and generate a starter setup via AI
 - **AI side panel**: Tambo chat that can use the registered tools/components
 
 ## Quickstart
@@ -40,6 +42,9 @@ NEXT_PUBLIC_TAMBO_URL=
 # Upstash Redis (required for the productivity tools)
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
+
+# Optional (but recommended): OpenRouter (used for AI workspace setup + challenge expansion)
+OPENROUTER_API_KEY=...
 ```
 
 Notes:
@@ -58,7 +63,7 @@ Open http://localhost:3000.
 
 ## Useful routes
 
-- `/` — main CrowdLens UI (dashboard + AI side panel)
+- `/` — main TaskStack UI (dashboard + AI side panel)
 - `/chat` — full-screen Tambo chat
 - `/interactables` — Tambo UI primitives playground
 - `/api/test-redis` — sanity check Upstash Redis connectivity; useful if the dashboard widgets don’t seem to persist data
@@ -67,8 +72,8 @@ Open http://localhost:3000.
 
 Tambo is configured in `src/lib/tambo.ts`:
 
-- `components`: React components that the model can render (Pomodoro timer, habit tracker, weekly review, etc.)
-- `tools`: server-side functions the model can call (read/write habits, save links, log distractions, …)
+- `components`: React components that the model can render (Pomodoro timer, Skills Track, creative tools, etc.)
+- `tools`: server-side functions the model can call (read/write challenges, save links, log distractions, …)
 
 See the `components` and `tools` arrays in `src/lib/tambo.ts` for the current configuration.
 
@@ -86,8 +91,8 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 
 ## Project notes / known limitations
 
-- The current Redis keying in `src/services/productivity-service.ts` is hard-coded to a placeholder user (`user_1`).
-- In non-local environments, this means all users share the same data; don’t deploy this as-is to production without adding proper auth and per-user keying.
+- “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys.
+- Don’t deploy this as-is to production without real authentication and security controls.
 
 ## Scripts
 

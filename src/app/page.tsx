@@ -46,16 +46,16 @@ function HomeContent() {
   const { activeView, setActiveView, isChatOpen, setIsChatOpen, habits, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
-  if (!userId) {
-    return <Onboarding />;
-  }
-
   // Auto-open chat for new users to guide onboarding
   React.useEffect(() => {
     if (userId && habits.length === 0 && !isChatOpen) {
       setIsChatOpen(true);
     }
   }, [userId, habits.length, setIsChatOpen, isChatOpen]);
+
+  if (!userId) {
+    return <Onboarding />;
+  }
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },

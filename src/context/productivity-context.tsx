@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService } from "@/services/productivity-service";
+import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence } from "@/services/productivity-service";
 
 interface PomodoroState {
     isRunning: boolean;
@@ -17,7 +17,7 @@ interface ProductivityContextType {
     // Auth/User
     userId: string | null;
     setUserId: React.Dispatch<React.SetStateAction<string | null>>;
-    onboardGuest: () => void;
+    onboardGuest: () => Promise<void>;
 
     // Challenges / Skills
     challenges: Challenge[];
@@ -102,10 +102,20 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     }, [userId, triggerCreativeRefresh]);
 
-    const onboardGuest = useCallback(() => {
-        // Generate a 6-digit PIN based ID
-        const pin = Math.floor(100000 + Math.random() * 900000).toString();
-        const guestId = `up_${pin}`; // up_ for User PIN
+    const onboardGuest = useCallback(async () => {
+        let isUnique = false;
+        let guestId = "";
+
+        // Retry loop to ensure PIN uniqueness
+        while (!isUnique) {
+            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            guestId = `up_${pin}`;
+            const exists = await checkUserExistence(guestId);
+            if (!exists) {
+                isUnique = true;
+            }
+        }
+
         setUserId(guestId);
     }, []);
 

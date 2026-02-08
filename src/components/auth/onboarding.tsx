@@ -58,6 +58,17 @@ export const Onboarding = () => {
         { label: "Project Manager", icon: "📅", prompt: "setup my workspace as a project manager" },
     ];
 
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleOnboard = async () => {
+        setIsLoading(true);
+        try {
+            await onboardGuest();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleNext = () => {
         if (step === "landing") setStep("auth");
     };
@@ -121,17 +132,18 @@ export const Onboarding = () => {
 
                         <div className="flex flex-col md:flex-row items-center justify-center gap-4">
                             <button
-                                onClick={handleNext}
-                                className="bg-white text-slate-950 px-10 py-5 text-lg font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-2xl shadow-white/5"
+                                onClick={handleOnboard}
+                                disabled={isLoading}
+                                className="bg-white text-slate-950 px-10 py-5 text-lg font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all flex items-center justify-center shadow-2xl shadow-white/5 disabled:opacity-50"
                             >
-                                Get Started
-                                <ArrowRight className="ml-2 w-5 h-5" />
+                                {isLoading ? "Generating Workspace..." : "New Workspace"}
+                                {!isLoading && <ArrowRight className="ml-2 w-5 h-5" />}
                             </button>
                             <button
-                                onClick={onboardGuest}
+                                onClick={handleNext}
                                 className="bg-white/5 border border-white/10 text-white/80 px-10 py-5 text-lg font-bold rounded-[2rem] hover:bg-white/10 transition-all active:scale-95"
                             >
-                                New Workspace
+                                Recover Session
                             </button>
                         </div>
 

@@ -33,6 +33,7 @@ function LinkPreview({ url }: { url: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!url || url === "undefined") return;
     fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
       .then(res => res.json())
       .then(setPreview)

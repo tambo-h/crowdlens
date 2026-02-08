@@ -6,8 +6,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get("url");
 
-    if (!url) {
-        return NextResponse.json({ error: "URL is required" }, { status: 400 });
+    if (!url || url === "undefined") {
+        return NextResponse.json({ error: "Valid URL is required" }, { status: 400 });
+    }
+
+    // Basic URL validation
+    try {
+        new URL(url.includes("://") ? url : `https://${url}`);
+    } catch (e) {
+        return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
     }
 
     try {

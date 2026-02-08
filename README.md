@@ -58,6 +58,10 @@ Notes:
 - You can create an OpenRouter API key here: https://openrouter.ai/keys
 - Minimum setup is Tambo + Upstash Redis; OpenRouter is only needed for AI workspace setup and challenge expansion.
 - If `OPENROUTER_API_KEY` is missing, AI workspace setup and challenge expansion will fail when invoked, but non-AI productivity features will continue to work.
+- Dependency mapping:
+  - Core dashboard (Pomodoro, links, energy tracking, creative tools): Tambo + Upstash Redis
+  - AI workspace setup (starter workspace generation): adds OpenRouter
+  - Challenge expansion in Skills Track: adds OpenRouter
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -81,7 +85,7 @@ Open http://localhost:3000.
 Tambo is configured in `src/lib/tambo.ts`:
 
 - `components`: React components that the model can render (Pomodoro timer, Skills Track, creative tools, etc.)
-- `tools`: server-side functions the model can call (read/write challenges, save links, log distractions, …)
+- `tools`: server-side functions the model can call (read/write challenges, save links, log distractions, update energy logs, …)
 
 See the `components` and `tools` arrays in `src/lib/tambo.ts` for the current configuration.
 
@@ -105,6 +109,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.
 - For production use, replace the workspace PIN model with real authentication (OAuth/OIDC or a managed auth provider), store user/workspace identity server-side, and add authorization checks for all server actions/tools.
+- No rate limiting or abuse protections are implemented for Tambo/OpenRouter calls.
 
 ## Scripts
 

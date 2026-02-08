@@ -50,6 +50,7 @@ OPENROUTER_API_KEY=...
 Notes:
 
 - You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
+- You can create an OpenRouter API key here: https://openrouter.ai/keys
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -92,6 +93,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 ## Project notes / known limitations
 
 - “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys.
+- AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, the app still runs, but those flows will error.
 - Don’t deploy this as-is to production without real authentication and security controls.
 
 ## Scripts

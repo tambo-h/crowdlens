@@ -1,10 +1,10 @@
 # TaskStack
 
-TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, etc.) with an AI side panel that can call server-side tools and render interactive UI components.
+TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, creative tools, and more) with an AI side panel that can call server-side tools and render interactive UI components.
 
 ## What’s in the app
 
-- **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy)
+- **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy, and other key signals)
 - **Pomodoro timer**: sessions tracked in Redis
 - **Skills Track**: AI-generated “skill challenges” you can complete and expand into steps + resources
 - **Links**: save / tag / browse useful links
@@ -51,6 +51,7 @@ Notes:
 
 - You can create a Tambo API key in the Tambo dashboard: https://tambo.co/dashboard
 - You can create an OpenRouter API key here: https://openrouter.ai/keys
+- Minimum setup is Tambo + Upstash Redis; OpenRouter is only needed for AI workspace setup and challenge expansion.
 - The app currently persists most data via Upstash Redis in server actions in `src/services/productivity-service.ts`.
 - `NEXT_PUBLIC_TAMBO_URL` is optional; by default the SDK uses Tambo’s hosted endpoint.
 
@@ -93,6 +94,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 ## Project notes / known limitations
 
 - “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys.
+- Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, the app still runs, but those flows will error.
 - Don’t deploy this as-is to production without real authentication and security controls.
 

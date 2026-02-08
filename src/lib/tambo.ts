@@ -53,7 +53,11 @@ import {
   togglePracticedRule,
   saveQuote,
   seedProductivityData,
+  batchSaveHabits,
+  batchSaveLinks,
+  setupPersonalizedWorkspace,
 } from "@/services/productivity-service";
+import { generatePersonalizedData } from "@/services/ai-service";
 
 export const tools: TamboTool[] = [
   {
@@ -195,6 +199,18 @@ export const tools: TamboTool[] = [
     description: "Seed the database with example habits and data for a guest user.",
     tool: seedProductivityData,
     inputSchema: z.object({}),
+    outputSchema: z.any(),
+  },
+  {
+    name: "setupPersonalizedWorkspace",
+    description: "Generates and saves a personalized workspace (habits and links) based on user skill/role.",
+    tool: setupPersonalizedWorkspace as any,
+    inputSchema: z.object({
+      userId: z.string().optional(),
+      skill: z.string().describe("The user's role or skill, e.g. 'Next.js Developer'"),
+      confirm: z.boolean().optional(),
+      data: z.any().optional()
+    }),
     outputSchema: z.any(),
   },
 ];

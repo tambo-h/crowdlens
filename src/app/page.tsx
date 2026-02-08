@@ -43,12 +43,19 @@ import { Onboarding } from "@/components/auth/onboarding";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, habits, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   if (!userId) {
     return <Onboarding />;
   }
+
+  // Auto-open chat for new users to guide onboarding
+  React.useEffect(() => {
+    if (userId && habits.length === 0 && !isChatOpen) {
+      setIsChatOpen(true);
+    }
+  }, [userId, habits.length, setIsChatOpen, isChatOpen]);
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -211,7 +218,7 @@ const TamboProviderWithContext = () => {
       "getPomodoroStats", "startPomodoroSession", "toggleHabit", "saveHabit", "saveLink",
       "logDistraction", "getDistractions", "saveSnippet", "getSnippets", "saveStandupEntry",
       "logEnergyLevel", "getEnergyData", "saveWeeklyReview", "getWeeklyReviews",
-      "togglePracticedRule", "saveQuote", "seedProductivityData"
+      "togglePracticedRule", "saveQuote", "seedProductivityData", "setupPersonalizedWorkspace"
     ];
 
     if (userIdTools.includes(t.name)) {

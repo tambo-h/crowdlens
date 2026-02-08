@@ -7,6 +7,7 @@
 
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
+import { generatePersonalizedData } from "./ai-service";
 
 // Helper to get user-specific keys
 const getKeys = (userId: string) => ({
@@ -21,6 +22,7 @@ const getKeys = (userId: string) => ({
   quotes: `quotes:${userId}`,
   practiced_rules: `practiced_rules:${userId}`,
   is_seeded: `is_seeded:${userId}`,
+  setup_draft: `setup_draft:${userId}`,
 });
 
 export interface Habit {
@@ -101,6 +103,22 @@ export async function saveHabit(userId: string, habit: Omit<Habit, "id" | "strea
 }
 
 /**
+ * Bulk save habits (called by AI onboarding)
+ */
+export async function batchSaveHabits(userId: string, habitsToSave: Omit<Habit, "id" | "streak" | "completedToday">[] = []): Promise<any> {
+  const keys = getKeys(userId);
+  const existing = await getHabits(userId);
+  const newHabits: Habit[] = (habitsToSave || []).map((h, i) => ({
+    ...h,
+    id: `ah_${Date.now()}_${i}`,
+    streak: 0,
+    completedToday: false
+  }));
+  await redis.set(keys.habits, [...newHabits, ...existing]);
+  return { success: true, count: newHabits.length };
+}
+
+/**
  * Get saved links
  */
 export async function getSavedLinks(userId: string, input: { limit?: number } = {}): Promise<any[]> {
@@ -118,6 +136,21 @@ export async function saveLink(userId: string, input: { url: string, title: stri
   const newLink = { ...input, id: `l_${Date.now()}`, savedAt: new Date().toISOString() };
   await redis.set(keys.links, [newLink, ...links]);
   return newLink;
+}
+
+/**
+ * Bulk save links (called by AI onboarding)
+ */
+export async function batchSaveLinks(userId: string, linksToSave: { title: string, url: string, tags: string[] }[] = []): Promise<any> {
+  const keys = getKeys(userId);
+  const existing = await getSavedLinks(userId);
+  const newLinks = (linksToSave || []).map((l, i) => ({
+    ...l,
+    id: `al_${Date.now()}_${i}`,
+    savedAt: new Date().toISOString()
+  }));
+  await redis.set(keys.links, [...newLinks, ...existing]);
+  return { success: true, count: newLinks.length };
 }
 
 export async function getInspirationalQuote(userId: string, input: { category?: string } = {}) {
@@ -243,6 +276,69 @@ export async function togglePracticedRule(userId: string, input: { ruleId: numbe
   return { success: true, practiced: updated };
 }
 
+/**
+ * Overwrite deep work rules (called by AI onboarding)
+ */
+export async function applyAIPracticedRules(userId: string, rules: string[]): Promise<any> {
+  // For simplicity, we'll store AI-generated rule names in a special key or just use context later
+  // Current app uses numeric IDs for static rules. We'll stick to habits/links for now or enhance rules later.
+  return { success: true };
+}
+
+/**
+ * AI-Driven Workspace Setup
+ */
+export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, confirm?: boolean, data?: any }) {
+  const keys = getKeys(userId);
+
+  if (!input.confirm) {
+    console.log("[Productivity-Service] Starting AI setup for skill:", input.skill);
+    const generated = await generatePersonalizedData(input.skill);
+    const habitNames = generated.habits.map(h => h.name).join(", ");
+
+    // Store draft in Redis temporarily (expiring in 30 minutes)
+    await redis.set(keys.setup_draft, generated, { ex: 1800 });
+    console.log("[Productivity-Service] Draft stored in Redis for user:", userId);
+
+    return {
+      message: `I've prepared a personalized setup for a ${input.skill}. Here's a preview:\n\n**Habits**: ${habitNames}\n\n**Resources**: ${generated.links.length} curated links.\n\nShould I apply these to your workspace?`,
+      elicitation: {
+        title: "Confirm Workspace Setup",
+        fields: [
+          { name: "confirm", type: "boolean", label: "Apply these habits and resources?", required: true }
+        ]
+      }
+    };
+  }
+
+  console.log("[Productivity-Service] Confirming setup for user:", userId);
+
+  // Retrieve from Redis
+  const draft = await redis.get<any>(keys.setup_draft);
+  if (!draft) {
+    console.error("[Productivity-Service] No draft found in Redis for user:", userId);
+    return {
+      success: false,
+      message: "Setup failed: The session expired or the data was lost. Please try describing your role again."
+    };
+  }
+
+  const habits = draft.habits || [];
+  const links = draft.links || [];
+  console.log("[Productivity-Service] Applying setup from draft - Habits:", habits.length, "Links:", links.length);
+
+  await batchSaveHabits(userId, habits);
+  await batchSaveLinks(userId, links);
+
+  // Cleanup
+  await redis.del(keys.setup_draft);
+
+  return {
+    success: true,
+    message: `Awesome! Your workspace is now optimized for a ${input.skill}. Your new habits and resources have been added.`
+  };
+}
+
 export async function getPomodoroStats(userId: string, input: any = {}) {
   const keys = getKeys(userId);
   const sessions = await redis.get(`${keys.pomodoro}:today`) || 0;
@@ -256,66 +352,25 @@ export async function seedProductivityData(userId: string) {
   const isSeeded = await redis.get(keys.is_seeded);
   if (isSeeded) return { success: true, alreadySeeded: true };
 
-  const habits: Habit[] = [
-    { id: "h1", name: "Deep Work (2h)", category: "Code", streak: 5, completedToday: false },
-    { id: "h2", name: "Read Technical Book", category: "Learn", streak: 3, completedToday: false },
-    { id: "h3", name: "Morning Run", category: "Health", streak: 7, completedToday: false },
-    { id: "h4", name: "Plan Tomorrow", category: "Review", streak: 10, completedToday: false },
-    { id: "h5", name: "Review Code Snippets", category: "Code", streak: 2, completedToday: false },
-    { id: "h6", name: "Solve LeetCode Problem", category: "Code", streak: 3, completedToday: false },
-    { id: "h7", name: "Learn New Framework", category: "Learn", streak: 1, completedToday: false },
-    { id: "h8", name: "Drink 2L Water", category: "Health", streak: 12, completedToday: false },
-    { id: "h9", name: "Weekly Reflection", category: "Review", streak: 4, completedToday: false },
-    { id: "h10", name: "Clear Email Inbox", category: "Review", streak: 8, completedToday: false },
-    { id: "h11", name: "Open Source Contribution", category: "Code", streak: 2, completedToday: false },
-    { id: "h12", name: "Meditate 10 Mins", category: "Health", streak: 6, completedToday: false },
-    { id: "h13", name: "Write Dev Journal", category: "Review", streak: 5, completedToday: false },
-    { id: "h14", name: "Clean Desk Space", category: "Review", streak: 15, completedToday: false },
-    { id: "h15", name: "Update Portfolio", category: "Code", streak: 1, completedToday: false }
-  ];
-
-  const links = [
-    { id: "l1", title: "Next.js Documentation", url: "https://nextjs.org/docs", tags: ["dev", "nextjs"], savedAt: new Date().toISOString() },
-    { id: "l2", title: "Upstash Redis", url: "https://upstash.com", tags: ["db", "redis"], savedAt: new Date().toISOString() },
-    { id: "l3", title: "Tailwind CSS", url: "https://tailwindcss.com", tags: ["design", "css"], savedAt: new Date().toISOString() },
-    { id: "l4", title: "Lucide Icons", url: "https://lucide.dev", tags: ["design", "icons"], savedAt: new Date().toISOString() },
-    { id: "l5", title: "Framer Motion", url: "https://www.framer.com/motion/", tags: ["animation", "react"], savedAt: new Date().toISOString() },
-    { id: "l6", title: "Slow Productivity", url: "https://www.calnewport.com/blog/", tags: ["philosophy", "productivity"], savedAt: new Date().toISOString() },
-    { id: "l7", title: "MDN Web Docs", url: "https://developer.mozilla.org/", tags: ["reference", "web"], savedAt: new Date().toISOString() },
-    { id: "l8", title: "Dribbble", url: "https://dribbble.com", tags: ["inspiration", "ui"], savedAt: new Date().toISOString() },
-    { id: "l9", title: "GitHub", url: "https://github.com", tags: ["dev", "vcs"], savedAt: new Date().toISOString() },
-    { id: "l10", title: "Excalidraw", url: "https://excalidraw.com", tags: ["tools", "design"], savedAt: new Date().toISOString() },
-    { id: "l11", title: "Vercel", url: "https://vercel.com", tags: ["deployment", "cloud"], savedAt: new Date().toISOString() },
-    { id: "l12", title: "Stack Overflow", url: "https://stackoverflow.com", tags: ["community", "dev"], savedAt: new Date().toISOString() },
-    { id: "l13", title: "Product Hunt", url: "https://producthunt.com", tags: ["inspiration", "marketing"], savedAt: new Date().toISOString() },
-    { id: "l14", title: "Hacker News", url: "https://news.ycombinator.com", tags: ["news", "tech"], savedAt: new Date().toISOString() },
-    { id: "l15", title: "Can I Use?", url: "https://caniuse.com", tags: ["browser", "reference"], savedAt: new Date().toISOString() }
-  ];
-
-  const energyEntries = Array.from({ length: 15 }, (_, i) => {
+  // minimal initial energy data for dashboard to look alive
+  const energyEntries = Array.from({ length: 5 }, (_, i) => {
     const date = new Date();
-    date.setDate(date.getDate() - (14 - i));
-    const levels = [7, 8, 4, 3, 6, 9, 7, 5, 4, 8, 6, 7, 3, 5, 8];
-    const notes = [
-      "Good sleep, feeling pumped", "Highly focused", "Mid-day slump", "Poor sleep, low energy",
-      "Back on track", "Flow state reached", "Steady focus", "Feeling okay", "Tired by evening",
-      "Great morning session", "Good work day", "Strong focus", "Late night debug session",
-      "Resting more", "Feeling energized"
-    ];
+    date.setHours(date.getHours() - (4 - i));
+    const levels = [7, 8, 4, 3, 6];
     return {
       id: `e_seed_${i}`,
       level: levels[i],
-      notes: notes[i],
+      notes: "System initialization",
       timestamp: date.toISOString()
     };
   });
 
-  await redis.set(keys.habits, habits);
-  await redis.set(keys.links, links);
   await redis.set(keys.energy, energyEntries);
   await redis.set(keys.is_seeded, true);
 
   // Clear others for fresh user
+  await redis.del(keys.habits);
+  await redis.del(keys.links);
   await redis.del(keys.distractions);
   await redis.del(keys.snippets);
   await redis.del(keys.standup);

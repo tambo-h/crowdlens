@@ -6,12 +6,12 @@ TaskStack is a developer-focused “productivity OS” built with **Next.js 15**
 
 - **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy, and other key signals)
 - **Pomodoro timer**: sessions tracked in Redis
-- **Skills Track**: AI-generated “skill challenges” you can complete and expand into steps + resources
+- **Skills Track**: “skill challenges” you can complete (and optionally expand into steps + resources via OpenRouter)
 - **Links**: save / tag / browse useful links
 - **Energy**: log and visualize energy levels; switches to a recovery view when energy is low
 - **Slow Productivity rules**: built-in reference
 - **Creative tools**: distractions journal, code snippets, standup log, energy mapper, weekly review
-- **Workspace onboarding**: create a new workspace (PIN) and generate a starter setup via AI
+- **Workspace onboarding**: create a new workspace (PIN) and optionally generate a starter setup via OpenRouter
 - **AI side panel**: Tambo chat that can use the registered tools/components
 
 ## Quickstart
@@ -21,6 +21,7 @@ TaskStack is a developer-focused “productivity OS” built with **Next.js 15**
 - Node.js (this repo uses `npm` via `package-lock.json`)
 - A **Tambo** API key (set as `NEXT_PUBLIC_TAMBO_API_KEY`)
 - **Upstash Redis** credentials
+- An **OpenRouter** API key (only required for AI workspace setup + challenge expansion)
 
 ### 1) Install dependencies
 
@@ -43,9 +44,9 @@ NEXT_PUBLIC_TAMBO_URL=
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# Optional (but recommended): OpenRouter (used for AI workspace setup + challenge expansion)
+# OpenRouter (required for AI workspace setup + challenge expansion)
 OPENROUTER_API_KEY=...
-# Without this, the app will still start, but AI workspace setup + challenge expansion will fail.
+# The app will still start without this, but those AI flows will fail.
 ```
 
 Notes:
@@ -95,6 +96,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 ## Project notes / known limitations
 
 - “Auth” is MVP-level: the workspace PIN (`up_XXXXXX`) is stored client-side in `localStorage` and used to scope Redis keys. Anyone with the PIN can access the workspace.
+- This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
 - Redis keys are scoped by the workspace PIN (see `getKeys()` in `src/services/productivity-service.ts`).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, the app still runs, but those flows will error.
 - Don’t deploy this as-is to production without real authentication and security controls.

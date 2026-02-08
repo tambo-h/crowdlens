@@ -6,6 +6,8 @@ TaskStack was previously called CrowdLens.
 
 > **Security note:** This app is designed for local/demo use only. The current “workspace PIN” model and server actions lack real authentication/authorization and are not safe for production (or any environment with real user data). See **Project notes / known limitations** below for details.
 
+**Secret management:** Don’t commit `.env.local` or any API keys (Tambo, Upstash, OpenRouter, etc.) to Git.
+
 ## What’s in the app
 
 - **Dashboard**: daily overview (Pomodoro count, challenges, recent links, current energy, and other key signals)
@@ -110,6 +112,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 - Don’t deploy this as-is to production without real authentication and security controls.
 - For production use, replace the workspace PIN model with real authentication (OAuth/OIDC or a managed auth provider), store user/workspace identity server-side, and add authorization checks for all server actions/tools.
 - No rate limiting or abuse protections are implemented for Tambo/OpenRouter calls.
+- Even for demos, avoid hosting this on a public URL with untrusted users; the PIN model is guessable and offers no isolation between untrusted parties.
 
 ## Scripts
 

@@ -2,6 +2,8 @@
 
 TaskStack is a developer-focused “productivity OS” built with **Next.js 15** and **Tambo AI**. It combines a multi-tool productivity dashboard (Pomodoro, skill challenges, links, energy tracking, creative tools, and more) with an AI side panel that can call server-side tools and render interactive UI components.
 
+TaskStack was previously called CrowdLens.
+
 > **Security note:** The current “workspace PIN” model is for local/demo use only. Don’t deploy publicly without real authentication/authorization. See **Project notes / known limitations** below for details.
 
 ## What’s in the app
@@ -102,6 +104,7 @@ At runtime, the `TamboProvider` is mounted in `src/app/page.tsx` (and also on `/
 - This is for local/demo use only (no real authentication/authorization, no revocation, and not safe to expose publicly).
 - AI workspace setup + challenge expansion require `OPENROUTER_API_KEY`. Without it, core productivity features still work, but those AI actions will fail when invoked.
 - Don’t deploy this as-is to production without real authentication and security controls.
+- For production use, replace the workspace PIN model with real auth and add authorization checks for all server actions/tools.
 
 ## Scripts
 

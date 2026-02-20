@@ -486,7 +486,8 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
 
     return {
-      message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?`,
+      message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?\n\n> 💡 **Action Required**: Respond with **"apply"** or click the **"Apply Setup Now"** button above to finalize your workspace.`,
+      suggestions: ["apply"],
       interactive: {
         name: "WorkspacePreview",
         props: {
@@ -513,12 +514,6 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
           links: generated.links || [],
           rules: generated.rules || []
         }
-      },
-      elicitation: {
-        title: "Confirm Workspace Setup",
-        fields: [
-          { name: "confirm", type: "boolean", label: `Apply this ${actualInput.experienceLevel || ""} setup?`, required: true }
-        ]
       }
     };
   }

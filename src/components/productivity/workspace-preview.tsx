@@ -4,7 +4,7 @@ import React from "react";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { CheckCircle2, Link as LinkIcon, BookOpen, Sparkles, Check } from "lucide-react";
-import { withInteractable } from "@tambo-ai/react";
+import { withInteractable, useTamboThreadInput } from "@tambo-ai/react";
 import { cn } from "@/lib/utils";
 
 export const workspacePreviewSchema = z.object({
@@ -87,10 +87,29 @@ export function WorkspacePreview({ role, habits = [], links = [], rules = [] }: 
                 )}
             </div>
 
-            <div className="bg-muted/30 p-3 text-center border-t border-border">
-                <p className="text-[10px] text-muted-foreground font-medium">Use the form below to apply this workspace.</p>
+            <div className="bg-primary/10 p-4 text-center border-t border-primary/20">
+                <p className="text-xs text-primary font-black uppercase tracking-widest mb-2">Ready to Start?</p>
+                <ApplyButton />
             </div>
         </div>
+    );
+}
+
+function ApplyButton() {
+    const { setValue, submit } = useTamboThreadInput();
+
+    return (
+        <button
+            onClick={async () => {
+                setValue("apply");
+                setTimeout(() => {
+                    submit({ resourceNames: {} });
+                }, 100);
+            }}
+            className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+        >
+            Apply Setup Now
+        </button>
     );
 }
 

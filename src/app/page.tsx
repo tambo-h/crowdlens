@@ -51,8 +51,11 @@ function HomeContent() {
   const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
-  const [isDark, setIsDark] = React.useState(false);
+  const [isDarkPref, setIsDarkPref] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+
+  // Auto switch to dark mode on low energy
+  const isDark = isLowEnergy || isDarkPref;
 
   React.useEffect(() => {
     if (isDark) {
@@ -91,7 +94,7 @@ function HomeContent() {
   return (
     <div className={cn(
       "flex h-screen overflow-hidden transition-colors duration-1000 relative",
-      isLowEnergy ? "bg-[#020617]" : "bg-background"
+      isLowEnergy ? "bg-black" : "bg-background"
     )}>
       {/* Mobile Sidebar Overlay */}
       {showMobileMenu && (
@@ -192,7 +195,7 @@ function HomeContent() {
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               <Bell className="w-5 h-5" />
             </button>
-            <button onClick={() => setIsDark(!isDark)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
+            <button onClick={() => setIsDarkPref(!isDarkPref)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
             <ProfileMenu />

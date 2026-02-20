@@ -188,6 +188,21 @@ export const Onboarding = () => {
                                         type="text"
                                         maxLength={1}
                                         value={digit}
+                                        onPaste={(e) => {
+                                            if (i === 0) {
+                                                e.preventDefault();
+                                                const pastedData = e.clipboardData.getData("text").trim().slice(0, 6);
+                                                if (/^\d+$/.test(pastedData)) {
+                                                    const newPin = [...pin];
+                                                    pastedData.split("").forEach((d, idx) => {
+                                                        if (idx < 6) newPin[idx] = d;
+                                                    });
+                                                    setPin(newPin);
+                                                    const nextIndex = Math.min(pastedData.length, 5);
+                                                    pinRefs[nextIndex].current?.focus();
+                                                }
+                                            }
+                                        }}
                                         onChange={(e) => handlePinChange(i, e.target.value)}
                                         onKeyDown={(e) => handleKeyDown(i, e)}
                                         className="w-12 h-16 bg-white/5 border border-white/10 rounded-xl text-center text-2xl font-black focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"

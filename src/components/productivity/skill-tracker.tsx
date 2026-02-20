@@ -10,7 +10,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check } from "lucide-react";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -27,11 +27,21 @@ export const skillTrackerSchema = z.object({
 export type SkillTrackerProps = z.input<typeof skillTrackerSchema>;
 
 export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerProps) {
-  const { challenges, toggleChallenge, saveChallenge, isLoadingChallenges, userId, expandChallengeDetails, expandingIds } = useProductivity();
+  const { challenges, toggleChallenge, saveChallenge, updateChallenge, deleteChallenge, isLoadingChallenges, userId, expandChallengeDetails, expandingIds } = useProductivity();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
+
+  const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
+  const [editingChallengeTitle, setEditingChallengeTitle] = useState("");
+
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [editingStepTitle, setEditingStepTitle] = useState("");
+
+  const [addingResourceTo, setAddingResourceTo] = useState<string | null>(null);
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceUrl, setNewResourceUrl] = useState("");
 
   // Initialize collapsed states once when challenges load
   useState(() => {
@@ -90,6 +100,71 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
     setIsAddingInRole(null);
     setNewTitle("");
+  };
+
+  const handleDeleteMainTask = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Delete this main task?")) {
+      if (deleteChallenge) await deleteChallenge(id);
+    }
+  };
+
+  const handleStartEditMainTask = (challenge: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingChallengeId(challenge.id);
+    setEditingChallengeTitle(challenge.title);
+  };
+
+  const handleSaveMainTask = async (challenge: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editingChallengeTitle.trim() && updateChallenge) {
+      await updateChallenge(challenge.id, { title: editingChallengeTitle });
+    }
+    setEditingChallengeId(null);
+  };
+
+  const handleDeleteStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Delete this subtask?") && updateChallenge) {
+      const newSteps = challenge.steps.filter((s: any) => s.id !== stepId);
+      await updateChallenge(challenge.id, { steps: newSteps });
+    }
+  };
+
+  const handleStartEditStep = (step: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingStepId(step.id);
+    setEditingStepTitle(step.title);
+  };
+
+  const handleSaveStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editingStepTitle.trim() && updateChallenge) {
+      const newSteps = challenge.steps.map((s: any) => s.id === stepId ? { ...s, title: editingStepTitle } : s);
+      await updateChallenge(challenge.id, { steps: newSteps });
+    }
+    setEditingStepId(null);
+  };
+
+  const handleAddResource = async (challenge: any, e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newResourceUrl.trim() || !updateChallenge) return;
+    const resources = challenge.resources || [];
+    await updateChallenge(challenge.id, {
+      resources: [...resources, { title: newResourceTitle || newResourceUrl, url: newResourceUrl }]
+    });
+    setAddingResourceTo(null);
+    setNewResourceTitle("");
+    setNewResourceUrl("");
+  };
+
+  const handleDeleteResource = async (challenge: any, url: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Delete this resource?") && updateChallenge) {
+      const resources = challenge.resources.filter((r: any) => r.url !== url);
+      await updateChallenge(challenge.id, { resources });
+    }
   };
 
   return (
@@ -192,10 +267,31 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                 </button>
 
                                 <div className="flex-1 cursor-pointer" onClick={() => handleExpand(challenge)}>
-                                  <h3 className={`font-bold text-base transition-all ${challenge.completed ? "line-through text-muted-foreground" : "text-foreground group-hover:text-primary"}`}>
-                                    {challenge.title}
-                                  </h3>
-                                  {challenge.steps.length > 0 && (
+                                  {editingChallengeId === challenge.id ? (
+                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                      <input
+                                        autoFocus
+                                        value={editingChallengeTitle}
+                                        onChange={e => setEditingChallengeTitle(e.target.value)}
+                                        className="flex-1 bg-background border border-primary px-2 py-1 rounded text-sm w-full"
+                                        onKeyDown={e => e.key === 'Enter' && handleSaveMainTask(challenge, e as any)}
+                                      />
+                                      <button onClick={(e) => handleSaveMainTask(challenge, e)} className="p-1 hover:bg-muted text-green-500 rounded"><Check className="w-4 h-4" /></button>
+                                      <button onClick={() => setEditingChallengeId(null)} className="p-1 hover:bg-muted text-red-500 rounded"><X className="w-4 h-4" /></button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between group/title">
+                                      <h3 className={`font-bold text-base transition-all ${challenge.completed ? "line-through text-muted-foreground" : "text-foreground group-hover:text-primary"}`}>
+                                        {challenge.title}
+                                      </h3>
+                                      <div className="opacity-0 group-hover/title:opacity-100 transition-opacity flex gap-1 bg-background/50 rounded p-1">
+                                        <button onClick={(e) => handleStartEditMainTask(challenge, e)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={(e) => handleDeleteMainTask(challenge.id, e)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {challenge.steps.length > 0 && editingChallengeId !== challenge.id && (
                                     <div className="flex items-center gap-2 mt-1">
                                       <div className="flex -space-x-1">
                                         {challenge.steps.slice(0, 3).map((_step: any, i: number) => (
@@ -210,7 +306,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   {expandingIds.includes(challenge.id) && (
                                     <div className="flex items-center gap-2 mt-2">
                                       <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
-                                      <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">Architecting Strategy...</span>
+                                      <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">Strategizing...</span>
                                     </div>
                                   )}
                                 </div>
@@ -235,7 +331,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   {expandingIds.includes(challenge.id) ? (
                                     <div className="py-8 text-center flex flex-col items-center">
                                       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
-                                      <p className="text-sm font-bold text-foreground">AI Analysis in progress...</p>
+                                      <p className="text-sm font-bold text-foreground">AI Strategy Loading...</p>
                                     </div>
                                   ) : (
                                     <>
@@ -244,15 +340,41 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                           {challenge.steps.map((step: any) => (
                                             <div
                                               key={step.id}
-                                              className="flex items-center gap-3 text-sm group/step cursor-pointer py-1"
-                                              onClick={() => toggleChallenge(challenge.id, undefined, step.id)}
+                                              className="flex items-center justify-between text-sm group/step py-1"
                                             >
-                                              <div className={`transition-all duration-300 ${step.completed ? "text-primary scale-110" : "text-muted-foreground group-hover/step:text-primary"}`}>
-                                                {step.completed ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                                              <div
+                                                className="flex items-center gap-3 cursor-pointer flex-1"
+                                                onClick={() => toggleChallenge(challenge.id, undefined, step.id)}
+                                              >
+                                                <div className={`transition-all duration-300 ${step.completed ? "text-primary scale-110" : "text-muted-foreground group-hover/step:text-primary"}`}>
+                                                  {step.completed ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                                                </div>
+
+                                                {editingStepId === step.id ? (
+                                                  <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                                    <input
+                                                      autoFocus
+                                                      value={editingStepTitle}
+                                                      onChange={e => setEditingStepTitle(e.target.value)}
+                                                      className="flex-1 bg-background border border-primary px-2 py-1 rounded text-sm min-w-0"
+                                                      onKeyDown={e => e.key === 'Enter' && handleSaveStep(challenge, step.id, e as any)}
+                                                    />
+                                                    <button onClick={(e) => handleSaveStep(challenge, step.id, e)} className="p-1 hover:bg-background text-green-500 rounded"><Check className="w-4 h-4" /></button>
+                                                    <button onClick={() => setEditingStepId(null)} className="p-1 hover:bg-background text-red-500 rounded"><X className="w-4 h-4" /></button>
+                                                  </div>
+                                                ) : (
+                                                  <span className={`font-medium transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                                                    {step.title}
+                                                  </span>
+                                                )}
                                               </div>
-                                              <span className={`font-medium transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                                                {step.title}
-                                              </span>
+
+                                              {editingStepId !== step.id && (
+                                                <div className="opacity-0 group-hover/step:opacity-100 transition-opacity flex gap-1 pl-4">
+                                                  <button onClick={(e) => handleStartEditStep(step, e)} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-primary"><Edit2 className="w-3 h-3" /></button>
+                                                  <button onClick={(e) => handleDeleteStep(challenge, step.id, e)} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                                                </div>
+                                              )}
                                             </div>
                                           ))}
                                         </div>
@@ -263,30 +385,58 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </div>
                                       )}
 
-                                      {challenge.resources && challenge.resources.length > 0 && (
-                                        <div className="mt-8 space-y-4">
+                                      <div className="mt-8 space-y-4">
+                                        <div className="flex items-center justify-between">
                                           <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Knowledge Resources</h4>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {challenge.resources.map((res: any, idx: number) => (
+                                          <button
+                                            onClick={() => setAddingResourceTo(addingResourceTo === challenge.id ? null : challenge.id)}
+                                            className="text-[10px] flex items-center gap-1 font-bold text-primary hover:text-primary/80 uppercase tracking-widest"
+                                          >
+                                            {addingResourceTo === challenge.id ? "Cancel" : "Add Link"}
+                                          </button>
+                                        </div>
+
+                                        {addingResourceTo === challenge.id && (
+                                          <form onSubmit={(e) => handleAddResource(challenge, e)} className="flex gap-2 bg-background p-2 rounded-xl border border-primary/20">
+                                            <input
+                                              value={newResourceTitle} onChange={e => setNewResourceTitle(e.target.value)}
+                                              placeholder="Title (optional)" className="flex-1 bg-transparent px-2 text-sm outline-none border-r border-border"
+                                            />
+                                            <input
+                                              value={newResourceUrl} onChange={e => setNewResourceUrl(e.target.value)}
+                                              placeholder="URL must exist..." required className="flex-[2] bg-transparent px-2 text-sm outline-none"
+                                            />
+                                            <button type="submit" className="bg-primary text-primary-foreground px-3 rounded-lg text-xs font-bold hover:opacity-90">Save</button>
+                                          </form>
+                                        )}
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                          {(challenge.resources || []).map((res: any, idx: number) => (
+                                            <div key={idx} className="relative group/res">
                                               <a
-                                                key={idx}
                                                 href={res.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-primary/50 hover:bg-muted/20 transition-all group/res overflow-hidden"
+                                                className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-primary/50 hover:bg-muted/20 transition-all overflow-hidden"
                                               >
                                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover/res:bg-primary group-hover/res:text-primary-foreground transition-all">
                                                   <BookOpen className="w-4 h-4" />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
+                                                <div className="flex-1 min-w-0 pr-6">
                                                   <p className="text-xs font-bold truncate">{res.title}</p>
                                                   <p className="text-[9px] text-muted-foreground truncate group-hover/res:text-primary transition-colors">{res.url}</p>
                                                 </div>
                                               </a>
-                                            ))}
-                                          </div>
+                                              <button
+                                                onClick={(e) => handleDeleteResource(challenge, res.url, e)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/res:opacity-100 hover:bg-red-500/10 text-red-500 rounded-lg transition-all"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          ))}
                                         </div>
-                                      )}
+                                      </div>
                                     </>
                                   )}
                                 </motion.div>

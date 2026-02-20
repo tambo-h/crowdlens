@@ -4,7 +4,7 @@
  */
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = "qwen/qwen3-coder-next";
+const MODEL = "openrouter/free";
 
 export interface GeneratedData {
     habits: Array<{ name: string, category: string }>; // Keeping key 'habits' for compatibility with setup draft but changing intent

@@ -226,6 +226,17 @@ export async function deleteChallenge(userId: string, challengeId: string): Prom
   return { success: true };
 }
 
+export async function updateChallenge(userId: string, input: { challengeId: string, updates: Partial<Challenge> }): Promise<any> {
+  const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
+  const keys = getKeys(actualUserId);
+  const challenges = await getChallenges(actualUserId);
+  const updated = challenges.map(c =>
+    c.id === actualInput.challengeId ? { ...c, ...actualInput.updates } : c
+  );
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
 export async function getSavedLinks(userId: string, input: { limit?: number } = {}): Promise<any[]> {
   const keys = getKeys(userId);
   const links = await redis.get<any[]>(keys.links) || [];

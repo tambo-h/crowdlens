@@ -23,9 +23,11 @@ interface ProductivityContextType {
     challenges: Challenge[];
     isLoadingChallenges: boolean;
     expandingIds: string[];
-    refreshChallenges: () => Promise<void>;
+    refreshChallenges: (background?: boolean) => Promise<void>;
     saveChallenge: (challenge: Omit<Challenge, "id">) => Promise<void>;
     toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<void>;
+    updateChallenge?: (challengeId: string, updates: any) => Promise<void>;
+    deleteChallenge?: (challengeId: string) => Promise<void>;
     expandChallengeDetails: (challengeId: string) => Promise<void>;
 
     // Pomodoro
@@ -120,19 +122,19 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         setUserId(guestId);
     }, []);
 
-    const refreshChallenges = useCallback(async () => {
+    const refreshChallenges = useCallback(async (background = false) => {
         if (!userId) {
             setIsLoadingChallenges(false);
             return;
         }
-        setIsLoadingChallenges(true);
+        if (!background) setIsLoadingChallenges(true);
         try {
             const data = await getChallenges(userId);
             setChallenges(data || []);
         } catch (err) {
             console.error("Failed to fetch challenges", err);
         } finally {
-            setIsLoadingChallenges(false);
+            if (!background) setIsLoadingChallenges(false);
         }
     }, [userId]);
 
@@ -167,7 +169,21 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const handleSaveChallenge = async (challenge: Omit<Challenge, "id">) => {
         if (!userId) return;
         await saveChallengeService(userId, challenge);
-        await refreshChallenges();
+        await refreshChallenges(true);
+    };
+
+    const handleUpdateChallenge = async (challengeId: string, updates: any) => {
+        if (!userId) return;
+        const { updateChallenge } = await import('@/services/productivity-service');
+        await updateChallenge(userId, { challengeId, updates });
+        await refreshChallenges(true);
+    };
+
+    const handleDeleteChallenge = async (challengeId: string) => {
+        if (!userId) return;
+        const { deleteChallenge } = await import('@/services/productivity-service');
+        await deleteChallenge(userId, challengeId);
+        await refreshChallenges(true);
     };
 
     const handleToggleChallenge = async (challengeId: string, completed?: boolean, stepId?: string) => {
@@ -203,7 +219,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         setExpandingIds(prev => [...prev, challengeId]);
         try {
             await expandChallengeService(userId, challengeId);
-            await refreshChallenges();
+            await refreshChallenges(true);
             triggerCreativeRefresh(); // Refresh links as well
         } catch (err) {
             console.error("Failed to expand challenge", err);
@@ -271,7 +287,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     return (
         <ProductivityContext.Provider value={{
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
-            saveChallenge: handleSaveChallenge,
+            saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,

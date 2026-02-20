@@ -85,17 +85,20 @@ export function ApiKeyCheck({ children }: ApiKeyCheckProps) {
   const isApiKeyMissing = !process.env.NEXT_PUBLIC_TAMBO_API_KEY;
 
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex-grow">
-        <div className="flex items-center gap-1">
-          <div className="min-w-6">{isApiKeyMissing ? "❌" : "✅"}</div>
-          <p>
-            {isApiKeyMissing ? "Tambo not initialized" : "Tambo initialized"}
-          </p>
+    <>
+      {isApiKeyMissing ? (
+        <div className="flex items-start gap-4">
+          <div className="flex-grow">
+            <div className="flex items-center gap-1">
+              <div className="min-w-6">❌</div>
+              <p>Tambo not initialized</p>
+            </div>
+            <ApiKeyMissingAlert />
+          </div>
         </div>
-        {isApiKeyMissing && <ApiKeyMissingAlert />}
-        {!isApiKeyMissing && children}
-      </div>
-    </div>
+      ) : (
+        children
+      )}
+    </>
   );
 }

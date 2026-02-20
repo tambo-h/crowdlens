@@ -29,7 +29,11 @@ import {
   MessageSquare,
   Activity,
   CalendarDays,
-  Sparkles
+  Sparkles,
+  Menu,
+  XIcon,
+  Moon,
+  Sun
 } from "lucide-react";
 
 // Creative tool imports
@@ -46,6 +50,17 @@ import { RecoveryTools } from "@/components/productivity/recovery-tools";
 function HomeContent() {
   const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
+
+  const [isDark, setIsDark] = React.useState(false);
+  const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   // Auto-open chat for new users to guide onboarding
   React.useEffect(() => {
@@ -75,17 +90,36 @@ function HomeContent() {
 
   return (
     <div className={cn(
-      "flex h-screen overflow-hidden transition-colors duration-1000",
+      "flex h-screen overflow-hidden transition-colors duration-1000 relative",
       isLowEnergy ? "bg-[#020617]" : "bg-background"
     )}>
+      {/* Mobile Sidebar Overlay */}
+      {showMobileMenu && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-card flex flex-col">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-2 mb-1 text-primary">
-            <Sparkles className="w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight">TaskStack</h1>
+      <aside className={cn(
+        "fixed md:relative z-50 w-64 h-full border-r border-border bg-card flex flex-col transition-transform duration-300",
+        showMobileMenu ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+        <div className="p-6 border-b border-border flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1 text-primary">
+              <Sparkles className="w-6 h-6" />
+              <h1 className="text-xl font-bold tracking-tight">TaskStack</h1>
+            </div>
+            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
           </div>
-          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
+          <button
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowMobileMenu(false)}
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
@@ -94,7 +128,10 @@ function HomeContent() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveView(item.id!)}
+                onClick={() => {
+                  setActiveView(item.id!);
+                  setShowMobileMenu(false);
+                }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium",
                   activeView === item.id
@@ -125,13 +162,21 @@ function HomeContent() {
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto transition-all duration-500 ease-in-out",
-        isChatOpen ? "mr-[30%]" : "mr-0"
+        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-500 ease-in-out relative",
+        isChatOpen ? "md:mr-[400px]" : "mr-0"
       )}>
-        <header className="h-16 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-8">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-            {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
-          </h2>
+        <header className="h-16 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 md:px-8">
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden p-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowMobileMenu(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
+            </h2>
+          </div>
           <div className="flex items-center gap-4">
             {currentEnergy !== null && (
               <div className={cn(
@@ -147,11 +192,14 @@ function HomeContent() {
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               <Bell className="w-5 h-5" />
             </button>
+            <button onClick={() => setIsDark(!isDark)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
             <ProfileMenu />
           </div>
         </header>
 
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className="p-4 md:p-8 max-w-6xl mx-auto">
           {activeView === "dashboard" && (
             isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />
           )}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { ApiKeyCheck } from "@/components/ApiKeyCheck";
 import { ProductivityDashboard } from "@/components/productivity/productivity-dashboard";
@@ -125,26 +126,36 @@ function HomeContent() {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
           {navItems.map((item, idx) => {
-            if (item.separator) return <div key={`sep-${idx}`} className="h-px bg-border my-4 mx-2" />;
+            if (item.separator) return <motion.div key={`sep-${idx}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-px bg-border/50 my-6 mx-2" />;
             return (
-              <button
+              <motion.button
                 key={item.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05, duration: 0.4 }}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setActiveView(item.id!);
                   setShowMobileMenu(false);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold group",
                   activeView === item.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                 )}
               >
-                {item.icon}
+                <div className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  activeView === item.id ? "bg-white/20" : "bg-muted group-hover:bg-primary/10"
+                )}>
+                  {item.icon}
+                </div>
                 {item.label}
-              </button>
+              </motion.button>
             );
           })}
         </nav>
@@ -165,8 +176,8 @@ function HomeContent() {
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-500 ease-in-out relative",
-        isChatOpen ? "md:mr-[400px]" : "mr-0"
+        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
+        isChatOpen ? "xl:mr-[400px]" : "mr-0"
       )}>
         <header className="h-16 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
@@ -202,7 +213,13 @@ function HomeContent() {
           </div>
         </header>
 
-        <div className="p-4 md:p-8 max-w-6xl mx-auto">
+        <motion.div
+          key={activeView + (isLowEnergy ? "-low" : "-normal")}
+          initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+          className="p-4 md:p-8 max-w-7xl mx-auto"
+        >
           {activeView === "dashboard" && (
             isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />
           )}
@@ -238,7 +255,7 @@ function HomeContent() {
           {activeView === "standup" && <StyledStandupLog />}
           {activeView === "energy" && <StyledEnergyMapper />}
           {activeView === "review" && <StyledWeeklyReview />}
-        </div>
+        </motion.div>
       </main>
 
       {/* Chat Side Panel */}

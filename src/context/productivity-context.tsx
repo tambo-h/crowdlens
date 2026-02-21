@@ -29,6 +29,9 @@ interface ProductivityContextType {
     updateChallenge?: (challengeId: string, updates: any) => Promise<void>;
     deleteChallenge?: (challengeId: string) => Promise<void>;
     expandChallengeDetails: (challengeId: string) => Promise<void>;
+    addChallengeStep: (challengeId: string, title: string) => Promise<void>;
+    updateChallengeStep: (challengeId: string, stepId: string, title: string) => Promise<void>;
+    deleteChallengeStep: (challengeId: string, stepId: string) => Promise<void>;
 
     // Pomodoro
     pomodoro: PomodoroState;
@@ -228,6 +231,27 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     }, [userId, refreshChallenges, triggerCreativeRefresh]);
 
+    const handleAddChallengeStep = async (challengeId: string, title: string) => {
+        if (!userId) return;
+        const { addChallengeStep } = await import('@/services/productivity-service');
+        await addChallengeStep(userId, { challengeId, title });
+        await refreshChallenges(true);
+    };
+
+    const handleUpdateChallengeStep = async (challengeId: string, stepId: string, title: string) => {
+        if (!userId) return;
+        const { updateChallengeStep } = await import('@/services/productivity-service');
+        await updateChallengeStep(userId, { challengeId, stepId, title });
+        await refreshChallenges(true);
+    };
+
+    const handleDeleteChallengeStep = async (challengeId: string, stepId: string) => {
+        if (!userId) return;
+        const { deleteChallengeStep } = await import('@/services/productivity-service');
+        await deleteChallengeStep(userId, { challengeId, stepId });
+        await refreshChallenges(true);
+    };
+
     const startPomodoro = useCallback(async (props: Partial<PomodoroState>) => {
         if (userId) {
             await startPomodoroService(userId);
@@ -288,6 +312,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         <ProductivityContext.Provider value={{
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
             saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
+            addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,

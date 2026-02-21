@@ -3,11 +3,11 @@
  * @description Service to interact with OpenRouter for personalized content generation
  */
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const getApiKey = () => process.env.OPENROUTER_API_KEY || "";
 const MODEL = "openrouter/free";
 
 export interface GeneratedData {
-    habits: Array<{ name: string, category: string }>; // Keeping key 'habits' for compatibility with setup draft but changing intent
+    habits: Array<{ name: string, category: string }>;
     links: Array<{ title: string, url: string, tags: string[] }>;
     rules: string[];
 }
@@ -18,8 +18,9 @@ export interface ChallengeExpansion {
 }
 
 export async function generatePersonalizedData(skill: string, experienceLevel?: string, projectType?: string): Promise<GeneratedData> {
-    if (!OPENROUTER_API_KEY) {
-        throw new Error("OPENROUTER_API_KEY is not configured");
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("OPENROUTER_API_KEY is not configured. Please add it to your environment variables.");
     }
 
     const prompt = `You are an expert mentor. For a ${experienceLevel || "standard"} ${skill}${projectType ? ` building a ${projectType}` : ""}, provide:
@@ -41,7 +42,9 @@ Make the challenges specific and practical.`;
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://taskstack.vercel.app",
+                "X-Title": "TaskStack"
             },
             body: JSON.stringify({
                 model: MODEL,
@@ -51,9 +54,15 @@ Make the challenges specific and practical.`;
         });
 
         const data = await response.json();
+
         if (data.error) {
             console.error("[AI-Service] OpenRouter Error:", data.error);
-            throw new Error(`OpenRouter API error: ${data.error.message}`);
+            throw new Error(`AI Generation failed: ${data.error.message || "Unknown error"}`);
+        }
+
+        if (!data.choices?.[0]?.message?.content) {
+            console.error("[AI-Service] Invalid response structure:", data);
+            throw new Error("AI Generation returned an invalid response structure.");
         }
 
         const content = data.choices[0].message.content;
@@ -61,8 +70,7 @@ Make the challenges specific and practical.`;
             ? content.split("```")[1].replace(/^(json|javascript|js)/, "").split("```")[0].trim()
             : content;
 
-        const parsed = JSON.parse(jsonStr) as GeneratedData;
-        return parsed;
+        return JSON.parse(jsonStr) as GeneratedData;
     } catch (error) {
         console.error("[AI-Service] Critical Failure:", error);
         throw error;
@@ -70,8 +78,9 @@ Make the challenges specific and practical.`;
 }
 
 export async function generateChallengeDetails(challengeTitle: string, role: string): Promise<ChallengeExpansion> {
-    if (!OPENROUTER_API_KEY) {
-        throw new Error("OPENROUTER_API_KEY is not configured");
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("OPENROUTER_API_KEY is not configured for challenge details.");
     }
 
     const prompt = `For the challenge "${challengeTitle}" in the context of being a ${role}, provide:
@@ -89,7 +98,9 @@ Respond ONLY with a JSON object:
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://taskstack.vercel.app",
+                "X-Title": "TaskStack"
             },
             body: JSON.stringify({
                 model: MODEL,
@@ -99,6 +110,12 @@ Respond ONLY with a JSON object:
         });
 
         const data = await response.json();
+
+        if (data.error || !data.choices?.[0]?.message?.content) {
+            console.error("[AI-Service] Details generation failure:", data.error || "No choices in response");
+            throw new Error("Failed to generate challenge details from AI.");
+        }
+
         const content = data.choices[0].message.content;
         const jsonStr = content.includes("```")
             ? content.split("```")[1].replace(/^(json|javascript|js)/, "").split("```")[0].trim()

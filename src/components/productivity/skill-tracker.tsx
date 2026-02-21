@@ -10,7 +10,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon } from "lucide-react";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -27,7 +27,20 @@ export const skillTrackerSchema = z.object({
 export type SkillTrackerProps = z.input<typeof skillTrackerSchema>;
 
 export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerProps) {
-  const { challenges, toggleChallenge, saveChallenge, updateChallenge, deleteChallenge, isLoadingChallenges, userId, expandChallengeDetails, expandingIds } = useProductivity();
+  const {
+    challenges,
+    toggleChallenge,
+    saveChallenge,
+    updateChallenge,
+    deleteChallenge,
+    isLoadingChallenges,
+    userId,
+    expandChallengeDetails,
+    expandingIds,
+    addChallengeStep,
+    updateChallengeStep,
+    deleteChallengeStep
+  } = useProductivity();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -42,6 +55,11 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const [addingResourceTo, setAddingResourceTo] = useState<string | null>(null);
   const [newResourceTitle, setNewResourceTitle] = useState("");
   const [newResourceUrl, setNewResourceUrl] = useState("");
+
+  const [addingStepTo, setAddingStepTo] = useState<string | null>(null);
+  const [newStepTitle, setNewStepTitle] = useState("");
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Initialize collapsed states once when challenges load
   useState(() => {
@@ -123,27 +141,26 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     setEditingChallengeId(null);
   };
 
-  const handleDeleteStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm("Delete this subtask?") && updateChallenge) {
-      const newSteps = challenge.steps.filter((s: any) => s.id !== stepId);
-      await updateChallenge(challenge.id, { steps: newSteps });
-    }
-  };
-
-  const handleStartEditStep = (step: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingStepId(step.id);
-    setEditingStepTitle(step.title);
-  };
-
   const handleSaveStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (editingStepTitle.trim() && updateChallenge) {
-      const newSteps = challenge.steps.map((s: any) => s.id === stepId ? { ...s, title: editingStepTitle } : s);
-      await updateChallenge(challenge.id, { steps: newSteps });
+    if (editingStepTitle.trim() && updateChallengeStep) {
+      await updateChallengeStep(challenge.id, stepId, editingStepTitle.trim());
     }
     setEditingStepId(null);
+  };
+
+  const handleAddStep = async (challengeId: string) => {
+    if (!newStepTitle.trim() || !addChallengeStep) return;
+    await addChallengeStep(challengeId, newStepTitle.trim());
+    setNewStepTitle("");
+    setAddingStepTo(null);
+  };
+
+  const handleDeleteStep = async (challengeId: string, stepId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deleteChallengeStep) {
+      await deleteChallengeStep(challengeId, stepId);
+    }
   };
 
   const handleAddResource = async (challenge: any, e: React.FormEvent) => {
@@ -254,7 +271,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                         {roleChallenges.map((challenge) => (
                           <div
                             key={challenge.id}
-                            className={`group border rounded-xl transition-all duration-300 ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                            className={`group border rounded-xl transition-all duration-300 relative ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
                               }`}
                           >
                             <div className="p-4 flex items-center justify-between gap-3">
@@ -284,12 +301,60 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       <h3 className={`font-bold text-base transition-all ${challenge.completed ? "line-through text-muted-foreground" : "text-foreground group-hover:text-primary"}`}>
                                         {challenge.title}
                                       </h3>
-                                      <div className="opacity-0 group-hover/title:opacity-100 transition-opacity flex gap-1 bg-background/50 rounded p-1">
-                                        <button onClick={(e) => handleStartEditMainTask(challenge, e)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
-                                        <button onClick={(e) => handleDeleteMainTask(challenge.id, e)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                      <div className="opacity-0 group-hover/title:opacity-100 transition-opacity flex gap-1 bg-background/50 rounded-lg p-1 border border-border pb-2">
+                                        <button onClick={(e) => handleStartEditMainTask(challenge, e)} className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-primary transition-colors" title="Edit challenge"><Edit2 className="w-4 h-4" /></button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setConfirmDeleteId(challenge.id);
+                                          }}
+                                          className="p-1.5 hover:bg-red-500/10 rounded-md text-muted-foreground hover:text-red-500 transition-colors"
+                                          title="Delete challenge"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
                                       </div>
                                     </div>
                                   )}
+
+                                  {/* Confirmation Overlay */}
+                                  <AnimatePresence>
+                                    {confirmDeleteId === challenge.id && (
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="absolute inset-0 bg-background/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-red-500/20 shadow-2xl"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <div className="bg-red-500/10 p-2 rounded-full mb-2">
+                                          <AlertOctagon className="w-5 h-5 text-red-500" />
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-widest text-red-500 mb-3">Delete Permanently?</p>
+                                        <div className="flex gap-2 w-full max-w-[200px]">
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              if (deleteChallenge) await deleteChallenge(challenge.id);
+                                              setConfirmDeleteId(null);
+                                            }}
+                                            className="flex-1 bg-red-500 text-white text-[10px] font-black uppercase h-8 rounded-lg hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                                          >
+                                            Confirm
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setConfirmDeleteId(null);
+                                            }}
+                                            className="flex-1 bg-muted text-foreground text-[10px] font-black uppercase h-8 rounded-lg hover:bg-border transition-colors"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
 
                                   {challenge.steps.length > 0 && editingChallengeId !== challenge.id && (
                                     <div className="flex items-center gap-2 mt-1">
@@ -326,7 +391,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-border bg-muted/5 px-12 pb-5 pt-2"
+                                  className="overflow-hidden border-t border-border bg-muted/5 px-12 pb-5 pt-2 relative"
                                 >
                                   {expandingIds.includes(challenge.id) ? (
                                     <div className="py-8 text-center flex flex-col items-center">
@@ -335,12 +400,46 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                     </div>
                                   ) : (
                                     <>
+                                      <div className="flex items-center justify-between mt-4 mb-2">
+                                        <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Breakdown</h4>
+                                        <button
+                                          onClick={() => setAddingStepTo(addingStepTo === challenge.id ? null : challenge.id)}
+                                          className="text-[10px] flex items-center gap-1 font-bold text-primary hover:text-primary/80 uppercase tracking-widest"
+                                        >
+                                          {addingStepTo === challenge.id ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                          {addingStepTo === challenge.id ? "Cancel" : "Add Step"}
+                                        </button>
+                                      </div>
+
+                                      {addingStepTo === challenge.id && (
+                                        <motion.div
+                                          initial={{ opacity: 0, y: -10 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          className="mb-4 flex gap-2"
+                                        >
+                                          <input
+                                            autoFocus
+                                            value={newStepTitle}
+                                            onChange={e => setNewStepTitle(e.target.value)}
+                                            placeholder="What needs to be done?"
+                                            className="flex-1 bg-background border border-primary/30 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/50"
+                                            onKeyDown={e => e.key === 'Enter' && handleAddStep(challenge.id)}
+                                          />
+                                          <button
+                                            onClick={() => handleAddStep(challenge.id)}
+                                            className="bg-primary text-primary-foreground px-4 rounded-lg text-xs font-bold hover:opacity-90 active:scale-95 transition-all"
+                                          >
+                                            Add
+                                          </button>
+                                        </motion.div>
+                                      )}
+
                                       {challenge.steps.length > 0 ? (
-                                        <div className="space-y-3 mt-2">
+                                        <div className="space-y-2">
                                           {challenge.steps.map((step: any) => (
                                             <div
                                               key={step.id}
-                                              className="flex items-center justify-between text-sm group/step py-1"
+                                              className="flex items-center justify-between text-sm group/step py-1.5 px-3 rounded-lg hover:bg-background/50 transition-colors border border-transparent hover:border-border/50"
                                             >
                                               <div
                                                 className="flex items-center gap-3 cursor-pointer flex-1"
@@ -359,11 +458,11 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                                       className="flex-1 bg-background border border-primary px-2 py-1 rounded text-sm min-w-0"
                                                       onKeyDown={e => e.key === 'Enter' && handleSaveStep(challenge, step.id, e as any)}
                                                     />
-                                                    <button onClick={(e) => handleSaveStep(challenge, step.id, e)} className="p-1 hover:bg-background text-green-500 rounded"><Check className="w-4 h-4" /></button>
-                                                    <button onClick={() => setEditingStepId(null)} className="p-1 hover:bg-background text-red-500 rounded"><X className="w-4 h-4" /></button>
+                                                    <button onClick={(e) => handleSaveStep(challenge, step.id, e)} className="p-1 hover:bg-muted text-green-500 rounded"><Check className="w-4 h-4" /></button>
+                                                    <button onClick={() => setEditingStepId(null)} className="p-1 hover:bg-muted text-red-500 rounded"><X className="w-4 h-4" /></button>
                                                   </div>
                                                 ) : (
-                                                  <span className={`font-medium transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                                                  <span className={`font-medium text-[13px] transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
                                                     {step.title}
                                                   </span>
                                                 )}
@@ -371,8 +470,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
                                               {editingStepId !== step.id && (
                                                 <div className="opacity-0 group-hover/step:opacity-100 transition-opacity flex gap-1 pl-4">
-                                                  <button onClick={(e) => handleStartEditStep(step, e)} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-primary"><Edit2 className="w-3 h-3" /></button>
-                                                  <button onClick={(e) => handleDeleteStep(challenge, step.id, e)} className="p-1 hover:bg-background rounded text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
+                                                  <button onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingStepId(step.id);
+                                                    setEditingStepTitle(step.title);
+                                                  }} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary"><Edit2 className="w-3 h-3" /></button>
+                                                  <button onClick={(e) => handleDeleteStep(challenge.id, step.id, e)} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                                                 </div>
                                               )}
                                             </div>

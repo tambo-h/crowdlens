@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export function ChatSidePanel() {
     const { isChatOpen, setIsChatOpen } = useProductivity();
-    const [showHistory, setShowHistory] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [panelWidth, setPanelWidth] = useState(400);
 
@@ -55,7 +54,7 @@ export function ChatSidePanel() {
                         exit={{ opacity: 0, x: "20%", scale: 0.95, filter: "blur(20px)" }}
                         transition={{ type: "spring", stiffness: 200, damping: 25 }}
                         className={cn(
-                            "fixed top-4 right-4 bottom-4 flex flex-col glass-dark border border-white/10 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] pointer-events-auto origin-right overflow-hidden",
+                            "fixed top-4 right-4 bottom-4 flex flex-col glass-panel border border-border/50 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] pointer-events-auto origin-right overflow-hidden",
                             isFullscreen ? "top-0 right-0 bottom-0 left-0 rounded-0" : ""
                         )}
                         style={{
@@ -65,7 +64,7 @@ export function ChatSidePanel() {
                     >
                         <div style={{ direction: "ltr" }} className="w-full h-full flex flex-col overflow-hidden relative">
                             {/* Panel Header */}
-                            <header className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5 backdrop-blur-md">
+                            <header className="flex items-center justify-between p-6 border-b border-border/10 bg-background/20 backdrop-blur-md">
                                 <div className="flex items-center gap-4">
                                     <motion.div
                                         animate={{
@@ -77,7 +76,7 @@ export function ChatSidePanel() {
                                         <Sparkles className="w-5 h-5 text-white" />
                                     </motion.div>
                                     <div>
-                                        <h2 className="text-sm font-black text-white uppercase tracking-tighter">Tambo Intelligence</h2>
+                                        <h2 className="text-sm font-black text-foreground uppercase tracking-tighter">Tambo Intelligence</h2>
                                         <div className="flex items-center gap-2">
                                             <div className="flex gap-0.5">
                                                 {[1, 2, 3].map(i => (
@@ -96,7 +95,6 @@ export function ChatSidePanel() {
 
                                 <div className="flex items-center gap-2">
                                     {[
-                                        { icon: <History className="w-4 h-4" />, action: () => setShowHistory(!showHistory), active: showHistory, label: "History" },
                                         { icon: isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />, action: () => setIsFullscreen(!isFullscreen), label: isFullscreen ? "Collapse" : "Expand" },
                                         { icon: <X className="w-4 h-4" />, action: () => setIsChatOpen(false), label: "Dismiss" }
                                     ].map((btn, i) => (
@@ -105,9 +103,7 @@ export function ChatSidePanel() {
                                             onClick={btn.action}
                                             className={cn(
                                                 "p-3 rounded-xl transition-all duration-300 flex items-center justify-center",
-                                                btn.active
-                                                    ? "bg-primary text-white scale-110 shadow-lg"
-                                                    : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10 hover:scale-105"
+                                                "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted hover:scale-105"
                                             )}
                                         >
                                             {btn.icon}
@@ -117,26 +113,7 @@ export function ChatSidePanel() {
                             </header>
 
                             <div className="flex-1 flex overflow-hidden">
-                                {showHistory && (
-                                    <motion.div
-                                        initial={{ opacity: 0, x: -50 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="w-full sm:w-80 border-r border-white/10 bg-black/20 backdrop-blur-xl absolute sm:relative inset-y-0 left-0 z-10"
-                                    >
-                                        <ThreadHistory defaultCollapsed={false} className="border-none h-full bg-transparent">
-                                            <ThreadHistoryHeader />
-                                            <div className="px-4 pb-4">
-                                                <ThreadHistoryNewButton className="w-full py-6 rounded-2xl bg-primary/10 border-primary/20 text-primary hover:bg-primary text-sm font-bold shadow-none" />
-                                            </div>
-                                            <ThreadHistorySearch className="px-4" />
-                                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                                <ThreadHistoryList />
-                                            </div>
-                                        </ThreadHistory>
-                                    </motion.div>
-                                )}
-
-                                <div className="flex-1 overflow-hidden h-full flex flex-col bg-black/10">
+                                <div className="flex-1 overflow-hidden h-full flex flex-col bg-background/10">
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}

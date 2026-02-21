@@ -26,8 +26,9 @@ interface ProductivityContextType {
     refreshChallenges: (background?: boolean) => Promise<void>;
     saveChallenge: (challenge: Omit<Challenge, "id">) => Promise<void>;
     toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<void>;
-    updateChallenge?: (challengeId: string, updates: any) => Promise<void>;
-    deleteChallenge?: (challengeId: string) => Promise<void>;
+    updateChallenge?: (id: string, updates: any) => Promise<void>;
+    deleteChallenge?: (id: string) => Promise<void>;
+    deleteRoleTrack?: (role: string) => Promise<void>;
     expandChallengeDetails: (challengeId: string) => Promise<void>;
     addChallengeStep: (challengeId: string, title: string) => Promise<void>;
     updateChallengeStep: (challengeId: string, stepId: string, title: string) => Promise<void>;
@@ -175,17 +176,24 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         await refreshChallenges(true);
     };
 
-    const handleUpdateChallenge = async (challengeId: string, updates: any) => {
+    const handleUpdateChallenge = async (id: string, updates: any) => {
         if (!userId) return;
         const { updateChallenge } = await import('@/services/productivity-service');
-        await updateChallenge(userId, { challengeId, updates });
+        await updateChallenge(userId, { challengeId: id, updates });
         await refreshChallenges(true);
     };
 
-    const handleDeleteChallenge = async (challengeId: string) => {
+    const handleDeleteChallenge = async (id: string) => {
         if (!userId) return;
         const { deleteChallenge } = await import('@/services/productivity-service');
-        await deleteChallenge(userId, challengeId);
+        await deleteChallenge(userId, id);
+        await refreshChallenges(true);
+    };
+
+    const handleDeleteRoleTrack = async (role: string) => {
+        if (!userId) return;
+        const { deleteRoleTrack } = await import('@/services/productivity-service');
+        await deleteRoleTrack(userId, role);
         await refreshChallenges(true);
     };
 
@@ -312,6 +320,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         <ProductivityContext.Provider value={{
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
             saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
+            deleteRoleTrack: handleDeleteRoleTrack,
             addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,
             pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,

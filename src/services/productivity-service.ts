@@ -275,6 +275,17 @@ export async function batchSaveChallenges(userId: string, challengesToSave: Omit
  * Get saved links
  */
 /**
+ * Delete all challenges for a specific role
+ */
+export async function deleteRoleTrack(userId: string, role: string): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.filter(c => c.role !== role);
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
+/**
  * Delete a challenge
  */
 export async function deleteChallenge(userId: string, challengeId: string): Promise<any> {

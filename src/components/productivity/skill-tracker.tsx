@@ -39,7 +39,8 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     expandingIds,
     addChallengeStep,
     updateChallengeStep,
-    deleteChallengeStep
+    deleteChallengeStep,
+    deleteRoleTrack
   } = useProductivity();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
@@ -200,20 +201,34 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
           const isCollapsed = collapsedRoles.includes(role);
 
           return (
-            <div key={role} className="bg-card rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div key={role} className="glass-panel rounded-2xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl">
               {/* Progress Banner */}
               <div
+                className="bg-primary/5 px-6 py-4 border-b border-border/50 flex justify-between items-center group/track cursor-pointer hover:bg-primary/10 transition-colors"
                 onClick={() => toggleCollapse(role)}
-                className="bg-primary/5 px-6 py-4 border-b border-border flex justify-between items-center group/track cursor-pointer hover:bg-primary/10 transition-colors"
               >
-                <div className="space-y-1">
-                  <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
-                    <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
-                    {role} Track
-                    <div className="ml-2 text-muted-foreground group-hover/track:text-primary transition-colors">
-                      {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                    </div>
-                  </h2>
+                <div className="flex items-center gap-4">
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+                      <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
+                      {role} Track
+                      <div className="ml-2 text-muted-foreground group-hover/track:text-primary transition-colors">
+                        {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                      </div>
+                    </h2>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete entire ${role} track? This cannot be undone.`)) {
+                        deleteRoleTrack && deleteRoleTrack(role);
+                      }
+                    }}
+                    className="p-2 opacity-0 group-hover/track:opacity-100 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all rounded-lg"
+                    title="Delete entire track"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex flex-col items-end gap-1">
@@ -271,7 +286,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                         {roleChallenges.map((challenge) => (
                           <div
                             key={challenge.id}
-                            className={`group border rounded-xl transition-all duration-300 relative ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                            className={`group border rounded-xl transition-all duration-300 relative ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background/80 border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 backdrop-blur-sm"
                               }`}
                           >
                             <div className="p-4 flex items-center justify-between gap-3">

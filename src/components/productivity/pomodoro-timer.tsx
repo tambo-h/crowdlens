@@ -18,6 +18,9 @@ export const pomodoroTimerSchema = z.object({
 });
 
 import { useProductivity } from "@/context/productivity-context";
+import { motion } from "framer-motion";
+import { Clock, RotateCcw, Volume2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type PomodoroTimerProps = z.input<typeof pomodoroTimerSchema>;
 
@@ -40,7 +43,6 @@ export function PomodoroTimer({
   const { timeLeft, isRunning, sessionType, sessionsCompleted, workDuration, breakDuration, longBreakDuration } = pomodoro;
 
   const [tickingSoundEnabled, setTickingSoundEnabled] = useState(tickingSoundDefault);
-
   const audioContextRef = useRef<AudioContext | null>(null);
   const prevTimeLeftRef = useRef(timeLeft);
 
@@ -50,13 +52,8 @@ export function PomodoroTimer({
       audioContextRef.current = createPomodoroAudio();
     }
     if (!audioContextRef.current) return;
-
     if (audioContextRef.current.state === "suspended") {
-      try {
-        await audioContextRef.current.resume();
-      } catch {
-        // Best-effort. Some browsers require a user gesture.
-      }
+      try { await audioContextRef.current.resume(); } catch { }
     }
   }, []);
 
@@ -64,38 +61,29 @@ export function PomodoroTimer({
     await primeAudio();
     const audioContext = audioContextRef.current;
     if (!audioContext || audioContext.state !== "running") return;
-
     const oscillator = audioContext.createOscillator();
     oscillator.type = options.type ?? "sine";
     oscillator.frequency.value = options.frequency;
-
     const gain = audioContext.createGain();
     gain.gain.value = 0;
-
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
-
     const now = audioContext.currentTime;
     const durationSec = Math.max(0.01, options.durationMs / 1000);
     const maxGain = Math.max(0, options.gain);
-
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(maxGain, now + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
-
     oscillator.start(now);
     oscillator.stop(now + durationSec);
   }, [primeAudio]);
 
-  const playTick = useCallback(() => {
-    return playTone({ frequency: 1100, durationMs: 35, gain: 0.03, type: "square" });
-  }, [playTone]);
+  const playTick = useCallback(() => playTone({ frequency: 1100, durationMs: 35, gain: 0.03, type: "square" }), [playTone]);
 
   const playBell = useCallback(async () => {
     await primeAudio();
     const audioContext = audioContextRef.current;
     if (!audioContext || audioContext.state !== "running") return;
-
     const now = audioContext.currentTime;
     const output = audioContext.createGain();
     output.gain.value = 0;
@@ -103,50 +91,26 @@ export function PomodoroTimer({
     output.gain.setValueAtTime(0.0001, now);
     output.gain.linearRampToValueAtTime(0.12, now + 0.01);
     output.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
-
     const osc1 = audioContext.createOscillator();
-    osc1.type = "sine";
     osc1.frequency.setValueAtTime(523.25, now);
     osc1.frequency.exponentialRampToValueAtTime(392, now + 0.9);
     osc1.connect(output);
     osc1.start(now);
     osc1.stop(now + 0.9);
-
-    const osc2 = audioContext.createOscillator();
-    osc2.type = "triangle";
-    osc2.frequency.setValueAtTime(783.99, now);
-    osc2.frequency.exponentialRampToValueAtTime(659.25, now + 0.9);
-    osc2.connect(output);
-    osc2.start(now);
-    osc2.stop(now + 0.9);
   }, [primeAudio]);
 
   useEffect(() => {
     return () => {
       const audioContext = audioContextRef.current;
       audioContextRef.current = null;
-
-      if (!audioContext) return;
-      try {
-        void audioContext.close();
-      } catch {
-        // Ignore
-      }
+      if (audioContext) try { void audioContext.close(); } catch { }
     };
   }, []);
 
-  // Initialize durations in context if they differ from initial props
-  useEffect(() => {
-    updatePomodoroDurations(initialWork, initialBreak, initialLongBreak);
-  }, [initialWork, initialBreak, initialLongBreak, updatePomodoroDurations]);
+  useEffect(() => { updatePomodoroDurations(initialWork, initialBreak, initialLongBreak); }, [initialWork, initialBreak, initialLongBreak, updatePomodoroDurations]);
 
-  const totalSeconds =
-    sessionType === "work" ? workDuration * 60 :
-      sessionType === "break" ? breakDuration * 60 :
-        longBreakDuration * 60;
-
+  const totalSeconds = sessionType === "work" ? workDuration * 60 : sessionType === "break" ? breakDuration * 60 : longBreakDuration * 60;
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -155,135 +119,130 @@ export function PomodoroTimer({
 
   const handleStartPause = () => {
     void primeAudio();
-
     if (isRunning) pausePomodoro();
     else startPomodoro({});
   };
 
-  const handleReset = () => resetPomodoro();
-
   useEffect(() => {
-    const prevTimeLeft = prevTimeLeftRef.current;
+    if (isRunning && tickingSoundEnabled && timeLeft > 0 && prevTimeLeftRef.current !== timeLeft) void playTick();
+    if (prevTimeLeftRef.current > 0 && timeLeft === 0 && !isRunning) void playBell();
     prevTimeLeftRef.current = timeLeft;
-
-    if (isRunning && tickingSoundEnabled && timeLeft > 0 && prevTimeLeft !== timeLeft) {
-      void playTick();
-    }
-
-    if (prevTimeLeft > 0 && timeLeft === 0 && !isRunning) {
-      void playBell();
-    }
   }, [isRunning, playBell, playTick, tickingSoundEnabled, timeLeft]);
 
   return (
-    <div className="bg-card rounded-xl p-8 shadow-lg border border-border max-w-md mx-auto">
-      {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Pomodoro Timer</h2>
-        {projectName && (
-          <p className="text-sm text-muted-foreground">
-            Project: <span className="font-medium text-primary">{projectName}</span>
-          </p>
-        )}
-      </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
+      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+      className="bg-card/40 backdrop-blur-xl rounded-[3rem] p-10 border border-border shadow-2xl max-w-lg w-full mx-auto relative overflow-hidden group"
+    >
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
 
-      {/* Session Type Badge */}
-      <div className="flex justify-center mb-6">
-        <span className={`px-4 py-1 rounded-full text-sm font-medium ${sessionType === "work"
-          ? "bg-primary/20 text-primary border border-primary/30"
-          : sessionType === "break"
-            ? "bg-accent/20 text-accent border border-accent/30"
-            : "bg-secondary/20 text-secondary border border-secondary/30"
-          }`}>
-          {sessionType === "work" ? "🎯 Focus Time" : sessionType === "break" ? "☕ Short Break" : "🌟 Long Break"}
-        </span>
+      {/* Header */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest mb-4">
+          <Clock className="w-3 h-3" /> Focus Engine
+        </div>
+        <h2 className="text-3xl font-black text-foreground tracking-tight">
+          {sessionType === "work" ? "Peak Focus" : "Creative Rest"}
+        </h2>
+        {projectName && <p className="text-sm text-muted-foreground mt-2 font-medium">Project: <span className="text-primary">{projectName}</span></p>}
       </div>
 
       {/* Circular Progress */}
-      <div className="relative w-64 h-64 mx-auto mb-6">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-          {/* Background circle */}
-          <circle
+      <div className="relative w-80 h-80 mx-auto mb-10">
+        <motion.div
+          animate={{ rotate: isRunning ? 360 : 0 }}
+          transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+          className="absolute inset-4 rounded-full border border-dashed border-primary/20"
+        />
+
+        <svg className="w-full h-full transform -rotate-90 filter drop-shadow-[0_0_20px_rgba(99,102,241,0.2)]" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="4" fill="none" className="text-muted/10" />
+          <motion.circle
             cx="50"
             cy="50"
             r="45"
             stroke="currentColor"
-            strokeWidth="6"
-            fill="none"
-            className="text-muted/30"
-          />
-          {/* Progress circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            stroke="currentColor"
-            strokeWidth="6"
+            strokeWidth="4"
             fill="none"
             strokeDasharray={`${2 * Math.PI * 45}`}
-            strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 45 * (1 - progress / 100) }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
             className={sessionType === "work" ? "text-primary" : "text-accent"}
             strokeLinecap="round"
           />
         </svg>
-        {/* Time display */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-5xl font-bold text-foreground">
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <motion.span
+            key={timeLeft}
+            initial={{ scale: 0.95, opacity: 0.8 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-7xl font-black text-foreground tabular-nums tracking-tighter"
+          >
             {formatTime(timeLeft)}
+          </motion.span>
+          <span className="text-[10px] font-black uppercase tracking-[.3em] text-muted-foreground mt-1">
+            Running Mode
           </span>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex gap-3 justify-center mb-6">
-        <button
+      <div className="flex gap-4 justify-center mb-10">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleStartPause}
-          className={`px-6 py-3 rounded-lg font-medium transition-all ${isRunning
-            ? "bg-accent text-accent-foreground hover:opacity-90"
-            : "bg-primary text-primary-foreground hover:opacity-90"
-            }`}
+          className={cn(
+            "h-16 px-10 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl",
+            isRunning
+              ? "bg-accent text-accent-foreground shadow-accent/20"
+              : "bg-primary text-primary-foreground shadow-primary/20"
+          )}
         >
-          {isRunning ? "⏸ Pause" : "▶ Start"}
-        </button>
-        <button
-          onClick={handleReset}
-          className="px-6 py-3 rounded-lg font-medium bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity"
+          {isRunning ? "Pause Session" : "Start Focus"}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05, rotate: 180 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => resetPomodoro()}
+          className="w-16 h-16 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
         >
-          🔄 Reset
-        </button>
+          <RotateCcw className="w-5 h-5" />
+        </motion.button>
       </div>
 
-      <div className="flex justify-center mb-6">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={tickingSoundEnabled}
-            onChange={(e) => {
-              const next = e.currentTarget.checked;
-              setTickingSoundEnabled(next);
-              if (next) void primeAudio();
-            }}
-            className="h-4 w-4 accent-primary"
-          />
-          Play ticking sound while running
-        </label>
-      </div>
-
-      {/* Session Counter */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          Sessions completed today: <span className="font-bold text-foreground">{sessionsCompleted}</span>
-        </p>
-        <div className="flex justify-center gap-1 mt-2">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className={`w-3 h-3 rounded-full ${i < sessionsCompleted % 4 ? "bg-primary" : "bg-muted"
-                }`}
-            />
-          ))}
+      {/* Footer Stats */}
+      <footer className="pt-8 border-t border-border/50 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1">
+            {[...Array(4)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={false}
+                animate={{
+                  scale: i < sessionsCompleted % 4 ? 1.2 : 1,
+                  backgroundColor: i < sessionsCompleted % 4 ? "var(--primary)" : "var(--muted)"
+                }}
+                className="w-2.5 h-2.5 rounded-full"
+              />
+            ))}
+          </div>
+          <span className="text-xs font-bold text-muted-foreground">{sessionsCompleted} Finished Today</span>
         </div>
-      </div>
-    </div>
+
+        <button
+          onClick={() => setTickingSoundEnabled(!tickingSoundEnabled)}
+          className={cn(
+            "p-2 rounded-lg transition-colors",
+            tickingSoundEnabled ? "text-primary bg-primary/10" : "text-muted-foreground"
+          )}
+        >
+          <Volume2 className="w-4 h-4" />
+        </button>
+      </footer>
+    </motion.div>
   );
 }

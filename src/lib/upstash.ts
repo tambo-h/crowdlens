@@ -1,14 +1,12 @@
 import { Redis } from "@upstash/redis";
 
-if (typeof window === "undefined") {
-    if (!process.env.UPSTASH_REDIS_REST_URL) {
-        console.error("[Upstash] Missing UPSTASH_REDIS_REST_URL");
-        throw new Error("Missing Upstash Redis URL");
-    }
-    if (!process.env.UPSTASH_REDIS_REST_TOKEN) {
-        console.error("[Upstash] Missing UPSTASH_REDIS_REST_TOKEN");
-        throw new Error("Missing Upstash Redis Token");
-    }
+const isConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+if (!isConfigured && typeof window === "undefined") {
+    throw new Error(
+        "FATAL: Upstash Redis environment variables (UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN) are not configured. " +
+        "Initialization failed to protect user data."
+    );
 }
 
 export const redis = new Redis({

@@ -7,6 +7,7 @@ import { Activity, Battery, BatteryMedium, BatteryLow, BatteryFull, TrendingUp, 
 import { format } from "date-fns";
 import { useEnergyMapperContext } from "./energy-mapper-context";
 import { cn } from "@/lib/utils";
+import { useProductivity } from "@/context/productivity-context";
 
 export const energyMapperSchema = z.object({
     initialEnergyData: z.array(z.any()).optional(),
@@ -16,13 +17,17 @@ type EnergyMapperProps = z.infer<typeof energyMapperSchema>;
 
 const MapperInner = () => {
     const { energyData, logEnergy, isLoading } = useEnergyMapperContext();
+    const { setActiveView } = useProductivity();
     const [level, setLevel] = React.useState(7);
     const [notes, setNotes] = React.useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        logEnergy(level, notes);
+        await logEnergy(level, notes);
         setNotes("");
+        if (level <= 3) {
+            setActiveView("dashboard"); // Redirect to Dashboard on low energy
+        }
     };
 
     const getEnergyIcon = (l: number) => {

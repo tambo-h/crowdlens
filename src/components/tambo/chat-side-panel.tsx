@@ -1,93 +1,133 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { MessageThreadFull } from "./message-thread-full";
 import { ThreadHistory, ThreadHistoryHeader, ThreadHistoryList, ThreadHistoryNewButton, ThreadHistorySearch } from "./thread-history";
-import { ChevronRight, ChevronLeft, MessageSquare, X, History } from "lucide-react";
+import { ChevronRight, ChevronLeft, MessageSquare, X, History, Maximize2, Minimize2, GripHorizontal, Sparkles } from "lucide-react";
 import { useProductivity } from "@/context/productivity-context";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function ChatSidePanel() {
     const { isChatOpen, setIsChatOpen } = useProductivity();
-    const [showHistory, setShowHistory] = React.useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [panelWidth, setPanelWidth] = useState(400);
 
     return (
-        <>
-            {/* Floating Toggle Button (visible when closed) */}
-            {!isChatOpen && (
-                <button
-                    onClick={() => setIsChatOpen(true)}
-                    className="fixed bottom-6 right-6 z-50 p-4 bg-primary text-primary-foreground rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 group"
-                    aria-label="Open Tambo AI"
-                >
-                    <div className="relative">
-                        <MessageSquare className="w-6 h-6 transition-transform group-hover:rotate-12" />
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-primary animate-pulse" />
-                    </div>
-                </button>
-            )}
-
-            {/* Side Panel */}
-            <div
-                className={cn(
-                    "fixed top-0 right-0 h-full z-50 transition-all duration-500 ease-in-out border-l border-border bg-card shadow-2xl overflow-hidden flex flex-col",
-                    isChatOpen ? "w-[35%] opacity-100" : "w-0 opacity-0"
-                )}
-            >
-                {/* Panel Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <span className="text-xl">✨</span>
+        <div className="fixed inset-0 pointer-events-none z-50">
+            {/* Floating Toggle Button */}
+            <AnimatePresence>
+                {!isChatOpen && (
+                    <motion.button
+                        initial={{ scale: 0, rotate: -45, filter: "blur(10px)" }}
+                        animate={{ scale: 1, rotate: 0, filter: "blur(0px)" }}
+                        exit={{ scale: 0, rotate: 45, filter: "blur(10px)" }}
+                        whileHover={{ scale: 1.1, y: -5 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setIsChatOpen(true)}
+                        className="fixed bottom-8 right-8 z-50 p-5 bg-primary text-primary-foreground rounded-3xl shadow-[0_20px_50px_rgba(99,102,241,0.4)] hover:shadow-[0_25px_60px_rgba(99,102,241,0.5)] transition-all duration-500 group pointer-events-auto border border-white/20"
+                    >
+                        <div className="relative">
+                            <MessageSquare className="w-6 h-6" />
+                            <motion.span
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                                className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full border-2 border-primary"
+                            />
                         </div>
-                        <div>
-                            <h2 className="text-sm font-semibold text-foreground">Tambo AI</h2>
-                            <div className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Online</span>
+                    </motion.button>
+                )}
+            </AnimatePresence>
+
+            {/* Resizable Chat Window */}
+            <AnimatePresence mode="wait">
+                {isChatOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, x: "20%", scale: 0.95, filter: "blur(20px)" }}
+                        animate={{
+                            opacity: 1,
+                            x: 0,
+                            scale: 1,
+                            filter: "blur(0px)",
+                            width: isFullscreen ? "100vw" : Math.max(350, Math.min(panelWidth, 850)),
+                        }}
+                        exit={{ opacity: 0, x: "20%", scale: 0.95, filter: "blur(20px)" }}
+                        transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                        className={cn(
+                            "fixed top-4 right-4 bottom-4 flex flex-col glass-panel border border-border/50 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] pointer-events-auto origin-right overflow-hidden",
+                            isFullscreen ? "top-0 right-0 bottom-0 left-0 rounded-0" : ""
+                        )}
+                        style={{
+                            maxWidth: isFullscreen ? "100vw" : "90vw",
+                            direction: "rtl"
+                        }}
+                    >
+                        <div style={{ direction: "ltr" }} className="w-full h-full flex flex-col overflow-hidden relative">
+                            {/* Panel Header */}
+                            <header className="flex items-center justify-between p-6 border-b border-border/10 bg-background/20 backdrop-blur-md">
+                                <div className="flex items-center gap-4">
+                                    <motion.div
+                                        animate={{
+                                            boxShadow: ["0 0 0 0px rgba(99,102,241,0)", "0 0 0 10px rgba(99,102,241,0.1)", "0 0 0 0px rgba(99,102,241,0)"]
+                                        }}
+                                        transition={{ repeat: Infinity, duration: 3 }}
+                                        className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-lg"
+                                    >
+                                        <Sparkles className="w-5 h-5 text-white" />
+                                    </motion.div>
+                                    <div>
+                                        <h2 className="text-sm font-black text-foreground uppercase tracking-tighter">Tambo Intelligence</h2>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3].map(i => (
+                                                    <motion.span
+                                                        key={i}
+                                                        animate={{ opacity: [0.3, 1, 0.3] }}
+                                                        transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
+                                                        className="w-1 h-3 bg-green-500/50 rounded-full"
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-[10px] text-green-400 font-black uppercase tracking-widest">Active System</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {[
+                                        { icon: isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />, action: () => setIsFullscreen(!isFullscreen), label: isFullscreen ? "Collapse" : "Expand" },
+                                        { icon: <X className="w-4 h-4" />, action: () => setIsChatOpen(false), label: "Dismiss" }
+                                    ].map((btn, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={btn.action}
+                                            className={cn(
+                                                "p-3 rounded-xl transition-all duration-300 flex items-center justify-center",
+                                                "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted hover:scale-105"
+                                            )}
+                                        >
+                                            {btn.icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            </header>
+
+                            <div className="flex-1 flex overflow-hidden">
+                                <div className="flex-1 overflow-hidden h-full flex flex-col bg-background/10">
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="flex-1 overflow-hidden"
+                                    >
+                                        <MessageThreadFull hideHeader />
+                                    </motion.div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setShowHistory(!showHistory)}
-                            className={cn(
-                                "p-2 rounded-lg transition-colors",
-                                showHistory ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                            )}
-                            title="Toggle history"
-                        >
-                            <History className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => setIsChatOpen(false)}
-                            className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                            title="Close panel"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Thread History Sidebar */}
-                    {showHistory && (
-                        <div className="w-64 border-r border-border animate-in slide-in-from-left duration-300">
-                            <ThreadHistory defaultCollapsed={false} className="border-none">
-                                <ThreadHistoryHeader />
-                                <ThreadHistoryNewButton className="w-full" />
-                                <ThreadHistorySearch />
-                                <ThreadHistoryList />
-                            </ThreadHistory>
-                        </div>
-                    )}
-
-                    {/* Chat Thread */}
-                    <div className="flex-1 overflow-hidden">
-                        <MessageThreadFull hideHeader />
-                    </div>
-                </div>
-            </div>
-        </>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 }

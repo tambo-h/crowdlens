@@ -23,8 +23,8 @@ export const linkCardSchema = z.object({
 
 import { useProductivity } from "@/context/productivity-context";
 import { useEffect, useState } from "react";
-import { getSavedLinks, deleteLink as deleteLinkService } from "@/services/productivity-service";
-import { Trash2, ExternalLink, MoreVertical, Edit2 } from "lucide-react";
+import { getSavedLinks, deleteLink as deleteLinkService, saveLink as saveLinkService } from "@/services/productivity-service";
+import { Trash2, ExternalLink, Plus, X } from "lucide-react";
 
 type LinkCardProps = z.infer<typeof linkCardSchema>;
 
@@ -66,6 +66,9 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
   const { userId, creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
   const [links, setLinks] = useState<any[]>(initialLinks);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [newTitle, setNewTitle] = useState("");
 
   useEffect(() => {
     if (!userId) return;
@@ -78,6 +81,16 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
     e.stopPropagation();
     if (!userId || !confirm("Delete this link?")) return;
     await deleteLinkService(userId, id);
+    triggerCreativeRefresh();
+  };
+
+  const handleAddLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId || !newUrl) return;
+    await saveLinkService(userId, { url: newUrl, title: newTitle, tags: [] });
+    setNewUrl("");
+    setNewTitle("");
+    setIsAdding(false);
     triggerCreativeRefresh();
   };
 
@@ -114,10 +127,40 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
 
   return (
     <div className="bg-card rounded-xl p-6 border border-border max-w-6xl w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">📚 Knowledge Base</h2>
-        <div className="text-xs text-muted-foreground">{linksToDisplay.length} resources saved</div>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <div>
+           <h2 className="text-2xl font-bold text-foreground">📚 Knowledge Base</h2>
+           <div className="text-xs text-muted-foreground">{linksToDisplay.length} resources saved</div>
+        </div>
+        <button
+            onClick={() => setIsAdding(!isAdding)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+        >
+            {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {isAdding ? "Cancel" : "Add Link"}
+        </button>
       </div>
+
+      {isAdding && (
+          <form onSubmit={handleAddLink} className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row gap-4">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Title (optional)"
+                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary text-sm"
+              />
+              <input
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                placeholder="URL (https://...)"
+                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary text-sm"
+                required
+              />
+              <button type="submit" className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-medium">
+                  Save
+              </button>
+          </form>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {linksToDisplay.map((link, idx) => (

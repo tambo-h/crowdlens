@@ -8,7 +8,11 @@ export interface EnergyMapperItemsProps {
 export const EnergyMapperItems = ({ children }: EnergyMapperItemsProps) => {
     const { energyData } = useEnergyMapperContext();
 
-    const items = React.useMemo(() => energyData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [energyData]);
+    const items = React.useMemo(() =>
+        energyData
+            .filter(item => item.notes !== "System initialization")
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        [energyData]);
 
     return <>{children({ items })}</>;
 };

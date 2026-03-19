@@ -176,6 +176,65 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
 }
 
 /**
+ * Add a new step to a challenge
+ */
+export async function addChallengeStep(userId: string, input: { challengeId: string, title: string }): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.map(c => {
+    if (c.id === input.challengeId) {
+      const newStep: ChallengeStep = {
+        id: `s_${Date.now()}`,
+        title: input.title,
+        completed: false
+      };
+      return { ...c, steps: [...c.steps, newStep], completed: false };
+    }
+    return c;
+  });
+
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
+/**
+ * Update a specific step's title
+ */
+export async function updateChallengeStep(userId: string, input: { challengeId: string, stepId: string, title: string }): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.map(c => {
+    if (c.id === input.challengeId) {
+      const updatedSteps = c.steps.map(s => s.id === input.stepId ? { ...s, title: input.title } : s);
+      return { ...c, steps: updatedSteps };
+    }
+    return c;
+  });
+
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
+/**
+ * Delete a specific step from a challenge
+ */
+export async function deleteChallengeStep(userId: string, input: { challengeId: string, stepId: string }): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.map(c => {
+    if (c.id === input.challengeId) {
+      const filteredSteps = c.steps.filter(s => s.id !== input.stepId);
+      const allDone = filteredSteps.length > 0 && filteredSteps.every(s => s.completed);
+      return { ...c, steps: filteredSteps, completed: allDone };
+    }
+    return c;
+  });
+
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
+/**
  * Save new challenge (Can be called by user or AI)
  */
 export async function saveChallenge(userId: string, challenge: Omit<Challenge, "id">): Promise<Challenge> {
@@ -216,6 +275,17 @@ export async function batchSaveChallenges(userId: string, challengesToSave: Omit
  * Get saved links
  */
 /**
+ * Delete all challenges for a specific role
+ */
+export async function deleteRoleTrack(userId: string, role: string): Promise<any> {
+  const keys = getKeys(userId);
+  const challenges = await getChallenges(userId);
+  const updated = challenges.filter(c => c.role !== role);
+  await redis.set(keys.skills, updated);
+  return { success: true };
+}
+
+/**
  * Delete a challenge
  */
 export async function deleteChallenge(userId: string, challengeId: string): Promise<any> {
@@ -223,6 +293,17 @@ export async function deleteChallenge(userId: string, challengeId: string): Prom
   const challenges = await getChallenges(userId);
   const filtered = challenges.filter(c => c.id !== challengeId);
   await redis.set(keys.skills, filtered);
+  return { success: true };
+}
+
+export async function updateChallenge(userId: string, input: { challengeId: string, updates: Partial<Challenge> }): Promise<any> {
+  const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
+  const keys = getKeys(actualUserId);
+  const challenges = await getChallenges(actualUserId);
+  const updated = challenges.map(c =>
+    c.id === actualInput.challengeId ? { ...c, ...actualInput.updates } : c
+  );
+  await redis.set(keys.skills, updated);
   return { success: true };
 }
 
@@ -461,55 +542,58 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
 
   if (!actualInput.confirm) {
     console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
-    const generated = await generatePersonalizedData(
-      actualInput.skill,
-      actualInput.experienceLevel,
-      actualInput.projectType
-    );
+    try {
+      const generated = await generatePersonalizedData(
+        actualInput.skill,
+        actualInput.experienceLevel,
+        actualInput.projectType
+      );
 
-    // Store draft in Redis temporarily (expiring in 30 minutes)
-    await redis.set(keys.setup_draft, generated, { ex: 1800 });
-    console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
+      // Store draft in Redis temporarily (expiring in 30 minutes)
+      await redis.set(keys.setup_draft, generated, { ex: 1800 });
+      console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
 
-    const habitList = (generated.habits || []).map(h => `- **${h.name}**`).slice(0, 5).join("\n");
-    const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
+      const habitList = (generated.habits || []).map(h => `- **${h.name}**`).slice(0, 5).join("\n");
+      const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
 
-    return {
-      message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?`,
-      interactive: {
-        name: "WorkspacePreview",
-        props: {
-          role: actualInput.skill,
-          habits: generated.habits || [],
-          links: generated.links || [],
-          rules: generated.rules || []
+      return {
+        message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?\n\n> 💡 **Action Required**: Respond with **"apply"** or click the **"Apply Setup Now"** button above to finalize your workspace.`,
+        suggestions: ["apply"],
+        interactive: {
+          name: "WorkspacePreview",
+          props: {
+            role: actualInput.skill,
+            habits: generated.habits || [],
+            links: generated.links || [],
+            rules: generated.rules || []
+          }
+        },
+        render: {
+          name: "WorkspacePreview",
+          props: {
+            role: actualInput.skill,
+            habits: generated.habits || [],
+            links: generated.links || [],
+            rules: generated.rules || []
+          }
+        },
+        component: {
+          name: "WorkspacePreview",
+          props: {
+            role: actualInput.skill,
+            habits: generated.habits || [],
+            links: generated.links || [],
+            rules: generated.rules || []
+          }
         }
-      },
-      render: {
-        name: "WorkspacePreview",
-        props: {
-          role: actualInput.skill,
-          habits: generated.habits || [],
-          links: generated.links || [],
-          rules: generated.rules || []
-        }
-      },
-      component: {
-        name: "WorkspacePreview",
-        props: {
-          role: actualInput.skill,
-          habits: generated.habits || [],
-          links: generated.links || [],
-          rules: generated.rules || []
-        }
-      },
-      elicitation: {
-        title: "Confirm Workspace Setup",
-        fields: [
-          { name: "confirm", type: "boolean", label: `Apply this ${actualInput.experienceLevel || ""} setup?`, required: true }
-        ]
-      }
-    };
+      };
+    } catch (error: any) {
+      console.error("[Productivity-Service] AI Setup failed:", error);
+      return {
+        success: false,
+        message: `### ❌ AI Generation Failed\n\n${error.message || "An unexpected error occurred during AI generation."}\n\n**Common fixes:**\n- Check if \`OPENROUTER_API_KEY\` is set in your environment variables.\n- Ensure you have an internet connection.\n- Try again in a few moments.`
+      };
+    }
   }
 
   console.log("[Productivity-Service] Confirming setup for user:", actualUserId);

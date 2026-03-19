@@ -100,10 +100,10 @@ const ReviewInner = () => {
                                         key={s}
                                         type="button"
                                         onClick={() => setRating(s)}
-                                        className={`p-1.5 rounded-lg transition-all ${rating >= s ? "text-yellow-500 scale-110" : "text-muted/30 hover:text-muted/60"
+                                        className={`p-1.5 rounded-lg transition-all ${rating >= s ? "text-yellow-500 scale-110" : "text-muted-foreground/30 hover:text-muted-foreground/60"
                                             }`}
                                     >
-                                        <Star className="w-6 h-6" fill={rating >= s ? "currentColor" : "none"} />
+                                        <Star className="w-6 h-6 stroke-foreground/40" fill={rating >= s ? "currentColor" : "none"} />
                                     </button>
                                 ))}
                             </div>

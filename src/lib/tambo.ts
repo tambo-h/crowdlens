@@ -61,9 +61,11 @@ import {
   updateQuote,
   deleteQuote,
   seedProductivityData,
-  batchSaveChallenges,
   batchSaveLinks,
   setupPersonalizedWorkspace,
+  addChallengeStep,
+  updateChallengeStep,
+  deleteChallengeStep,
 } from "@/services/productivity-service";
 import { generatePersonalizedData, generateChallengeDetails } from "@/services/ai-service";
 
@@ -281,6 +283,27 @@ export const tools: TamboTool[] = [
       confirm: z.boolean().optional(),
       data: z.any().optional()
     }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "addChallengeStep",
+    description: "Add a new manual step/sub-task to a specific challenge.",
+    tool: addChallengeStep as any,
+    inputSchema: z.object({ challengeId: z.string(), title: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "updateChallengeStep",
+    description: "Update the title of an existing step/sub-task.",
+    tool: updateChallengeStep as any,
+    inputSchema: z.object({ challengeId: z.string(), stepId: z.string(), title: z.string() }),
+    outputSchema: z.any(),
+  },
+  {
+    name: "deleteChallengeStep",
+    description: "Delete a specific step/sub-task from a challenge.",
+    tool: deleteChallengeStep as any,
+    inputSchema: z.object({ challengeId: z.string(), stepId: z.string() }),
     outputSchema: z.any(),
   },
 ];

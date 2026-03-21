@@ -206,7 +206,7 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
             </a>
 
             {/* Actions for manual management (Bug 1) */}
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/link:opacity-100 transition-opacity">
+            <div className="absolute top-2 right-2 flex gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/link:opacity-100 transition-opacity">
               <button
                 onClick={(e) => handleDelete(e, link.id)}
                 className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"

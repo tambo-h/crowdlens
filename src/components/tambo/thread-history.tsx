@@ -603,7 +603,7 @@ const ThreadOptionsDropdown = ({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
-          className="p-1 hover:bg-backdrop rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          className="p-1 hover:bg-backdrop rounded-md opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity cursor-pointer"
           onClick={(e) => e.stopPropagation()}
         >
           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />

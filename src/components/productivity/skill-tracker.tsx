@@ -224,7 +224,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                         deleteRoleTrack && deleteRoleTrack(role);
                       }
                     }}
-                    className="p-2 opacity-0 group-hover/track:opacity-100 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all rounded-lg"
+                    className="p-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/track:opacity-100 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all rounded-lg"
                     title="Delete entire track"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -316,7 +316,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       <h3 className={`font-bold text-base transition-all ${challenge.completed ? "line-through text-muted-foreground" : "text-foreground group-hover:text-primary"}`}>
                                         {challenge.title}
                                       </h3>
-                                      <div className="opacity-0 group-hover/title:opacity-100 transition-opacity flex gap-1 bg-background/50 rounded-lg p-1 border border-border pb-2">
+                                      <div className="opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/title:opacity-100 transition-opacity flex gap-1 bg-background/50 rounded-lg p-1 border border-border pb-2">
                                         <button onClick={(e) => handleStartEditMainTask(challenge, e)} className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-primary transition-colors" title="Edit challenge"><Edit2 className="w-4 h-4" /></button>
                                         <button
                                           onClick={(e) => {
@@ -484,7 +484,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                               </div>
 
                                               {editingStepId !== step.id && (
-                                                <div className="opacity-0 group-hover/step:opacity-100 transition-opacity flex gap-1 pl-4">
+                                                <div className="opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/step:opacity-100 transition-opacity flex gap-1 pl-4">
                                                   <button onClick={(e) => {
                                                     e.stopPropagation();
                                                     setEditingStepId(step.id);
@@ -547,7 +547,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                               </a>
                                               <button
                                                 onClick={(e) => handleDeleteResource(challenge, res.url, e)}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/res:opacity-100 hover:bg-red-500/10 text-red-500 rounded-lg transition-all"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/res:opacity-100 hover:bg-red-500/10 text-red-500 rounded-lg transition-all"
                                               >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                               </button>

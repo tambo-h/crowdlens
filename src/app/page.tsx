@@ -161,15 +161,8 @@ function HomeContent() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-
           <ApiKeyCheck>
-            <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Tambo AI</span>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">Ready to boost your productivity</p>
-            </div>
+            <></>
           </ApiKeyCheck>
         </div>
       </aside>

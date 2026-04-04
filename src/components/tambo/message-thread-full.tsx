@@ -87,7 +87,7 @@ export const MessageThreadFull = React.forwardRef<
     {
       id: "suggestion-3",
       title: "🥩 High Protein",
-      detailedSuggestion: "setup a plan to do high protein diet",
+      detailedSuggestion: "setup my workspace to do high protein diet",
       messageId: "setup-high-protein",
     },
   ];

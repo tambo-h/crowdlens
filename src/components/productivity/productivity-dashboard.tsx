@@ -116,7 +116,7 @@ export function ProductivityDashboard({
               >
                 {getGreeting()}{userName ? `, ${userName}` : ""}! <span className="inline-block animate-bounce-slow">✨</span>
               </motion.h1>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-muted-foreground">
                 <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-2xl border border-border/50">
                   <Clock className="w-4 h-4 text-primary" />
@@ -168,8 +168,8 @@ export function ProductivityDashboard({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Flow Sessions</span>
-                <ContextHelp 
-                  title="What is Flow?" 
+                <ContextHelp
+                  title="What is Flow?"
                   description="A period of intense focus. We use the Pomodoro technique (25 min focus + 5 min break) to help you get into the 'zone' without burning out."
                 />
               </div>
@@ -195,8 +195,8 @@ export function ProductivityDashboard({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Skill Mastery</span>
-                <ContextHelp 
-                  title="Mastery Tracking" 
+                <ContextHelp
+                  title="Mastery Tracking"
                   description="Your cumulative progress across all tracks. We track how many unique roles you're cultivating and how many challenges you've mastered."
                 />
               </div>
@@ -243,8 +243,8 @@ export function ProductivityDashboard({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Biometric Energy</span>
-                <ContextHelp 
-                  title="Understand Your Energy" 
+                <ContextHelp
+                  title="Understand Your Energy"
                   description="A scale of 1-10 reflecting your cognitive capacity. When it drops below 3, the OS switches to 'Recovery Mode' to help you recharge."
                 />
               </div>
@@ -267,7 +267,7 @@ export function ProductivityDashboard({
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
               <Sparkles className="w-64 h-64 text-primary" />
             </div>
-            
+
             <div className="relative z-10 max-w-2xl">
               {(() => {
                 const day = currentTime.getDay();
@@ -295,7 +295,7 @@ export function ProductivityDashboard({
                           I see you are working through the weekend. You must be working extremely hard, but remember to breathe.
                         </p>
                         <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-medium bg-primary/5 p-6 rounded-2xl border-l-4 border-primary">
-                          Work can wait, but your time cannot. Every week you spend grinding away now, you might regret at 60 if you didn't enjoy the journey. 
+                          Work can wait, but your time cannot. Every week you spend grinding away now, you might regret at 60 if you didn't enjoy the journey.
                           <span className="block mt-3 text-foreground font-bold">
                             If you're working today, let it be for upskilling and personal growth—not just for others. Invest in yourself.
                           </span>
@@ -323,7 +323,7 @@ export function ProductivityDashboard({
               <div className="w-2 h-2 rounded-full bg-accent" />
               Skill Momentum
             </h3>
-            
+
             <div className="space-y-6 flex-1 flex flex-col justify-center">
               {[
                 { label: "Track Progress", value: totalChallenges > 0 ? `${Math.round((challengesCompletedToday / totalChallenges) * 100)}%` : "0%", sub: "Completed Today", color: "bg-primary/20 text-primary" },
@@ -391,7 +391,7 @@ export function ProductivityDashboard({
                 {[
                   { label: "Spanish", prompt: "setup my workspace for learning Spanish", icon: "🥘" },
                   { label: "Sugar-Free", prompt: "setup my workspace for quitting sugar", icon: "🚫" },
-                  { label: "High Protein", prompt: "setup a plan to do high protein diet", icon: "🥩" },
+                  { label: "High Protein", prompt: "setup my workspace to do high protein diet", icon: "🥩" },
                   { label: "Core Developer", prompt: "setup my workspace as a nextjs developer", icon: "🚀" },
                 ].map((ex) => (
                   <button

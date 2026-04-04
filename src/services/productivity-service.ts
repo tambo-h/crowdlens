@@ -61,6 +61,7 @@ const getKeys = (userId: string) => ({
   is_seeded: `is_seeded:${userId}`,
   setup_draft: `setup_draft:${userId}`,
   track_deadline: `track_deadline:${userId}`,
+  rate_limit: `rate_limit:${userId}:${new Date().toISOString().split('T')[0]}`,
 });
 
 /**
@@ -556,6 +557,23 @@ export async function applyAIPracticedRules(userId: string, rules: string[]): Pr
 }
 
 /**
+ * Check if a prompt is valid for productivity/setup
+ */
+function isValidProductivityPrompt(prompt: string): boolean {
+  const lowercase = prompt.toLowerCase();
+  const forbiddenPatterns = [
+    "height of", "coordinates of", "who is", "what is the capital", 
+    "tell me a joke", "weather in", "how old is", "stock price"
+  ];
+  
+  if (forbiddenPatterns.some(p => lowercase.includes(p))) return false;
+  
+  // Must mention setup or workspace or be a role/skill
+  const validKeywords = ["setup", "workspace", "track", "skill", "learn", "plan", "developer", "designer", "diet", "habit", "study"];
+  return validKeywords.some(kw => lowercase.includes(kw)) || prompt.trim().split(" ").length <= 3;
+}
+
+/**
  * AI-Driven Workspace Setup
  */
 export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, experienceLevel?: string, projectType?: string, confirm?: boolean, data?: any }) {
@@ -573,6 +591,23 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
 
   const keys = getKeys(actualUserId);
 
+  // 1. Rate Limit Check (100 requests / day)
+  const currentCount = await redis.get<number>(keys.rate_limit) || 0;
+  if (currentCount >= 100) {
+    return {
+      success: false,
+      message: "### 🛑 Daily Limit Reached\n\nYou've reached your limit of 100 requests for today. Please wait 24 hours before setting up more tracks to ensure stability for all users."
+    };
+  }
+
+  // 2. Intent Filtering
+  if (!isValidProductivityPrompt(actualInput.skill)) {
+    return {
+      success: false,
+      message: "### ⚠️ Invalid Request\n\nI am specialized ONLY in **productivity, growth tracks, and workspace optimization**. I cannot answer general knowledge questions or perform tasks unrelated to your personal growth. Please provide a skill, hobby, or role you want to focus on."
+    };
+  }
+
   if (!actualInput.confirm) {
     console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
     try {
@@ -582,6 +617,10 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
         actualInput.projectType,
         new Date().toISOString().split('T')[0]
       );
+
+      // Increment Rate Limit on success
+      await redis.incr(keys.rate_limit);
+      await redis.expire(keys.rate_limit, 86400); // 24 hours
 
       // Store draft in Redis temporarily (expiring in 30 minutes)
       await redis.set(keys.setup_draft, generated, { ex: 1800 });

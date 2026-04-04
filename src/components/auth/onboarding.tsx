@@ -58,7 +58,7 @@ export const Onboarding = () => {
     const setupExamples = [
         { label: "Spanish", icon: "🥘", prompt: "setup my workspace for learning Spanish" },
         { label: "Sugar-Free", icon: "🚫", prompt: "setup my workspace for quitting sugar" },
-        { label: "High Protein", icon: "🥩", prompt: "setup a plan to do high protein diet" },
+        { label: "High Protein", icon: "🥩", prompt: "setup my workspace to do high protein diet" },
     ];
 
     const [isLoading, setIsLoading] = useState(false);

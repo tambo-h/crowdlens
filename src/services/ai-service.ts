@@ -55,7 +55,10 @@ Make the challenges specific and practical. Space deadlines realistically (don't
             },
             body: JSON.stringify({
                 model: MODEL,
-                messages: [{ role: "user", content: prompt }],
+                messages: [
+                    { role: "system", content: "You are a Productivity OS mentor. You ONLY help with professional work, skill tracks, roles, and workspace setups. Reject any general knowledge, off-topic or recreational queries." },
+                    { role: "user", content: prompt }
+                ],
                 response_format: { type: "json_object" }
             }),
         });
@@ -118,7 +121,10 @@ Respond ONLY with a JSON object:
             },
             body: JSON.stringify({
                 model: MODEL,
-                messages: [{ role: "user", content: prompt }],
+                messages: [
+                    { role: "system", content: "You are a Growth Mentor. Provide only the requested JSON for this challenge. Refuse unrelated requests." },
+                    { role: "user", content: prompt }
+                ],
                 response_format: { type: "json_object" }
             }),
         });

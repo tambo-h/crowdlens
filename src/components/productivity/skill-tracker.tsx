@@ -12,6 +12,7 @@ import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
 import { ContextHelp } from "@/components/ui/context-help";
+import { cn } from "@/lib/utils";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -20,7 +21,14 @@ export const skillTrackerSchema = z.object({
       title: z.string(),
       completed: z.boolean(),
       role: z.string(),
-      steps: z.array(z.object({ id: z.string(), title: z.string(), completed: z.boolean() })),
+      steps: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          completed: z.boolean(),
+          deadline: z.string().optional(),
+        })
+      ),
     })
   ).default([]).describe("List of challenges to track and manage."),
 });
@@ -128,6 +136,11 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const didInitRef = useRef(false);
 
+  const [editingDeadlineId, setEditingDeadlineId] = useState<string | null>(null);
+  const [tempDeadline, setTempDeadline] = useState("");
+  const [editingStepDeadlineId, setEditingStepDeadlineId] = useState<string | null>(null);
+  const [stepTempDeadline, setStepTempDeadline] = useState("");
+
   // Initialize collapsed states once when challenges load
   useEffect(() => {
     if (didInitRef.current || challenges.length === 0) return;
@@ -176,6 +189,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     setCollapsedRoles(prev =>
       prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
     );
+  };
+
+  const saveDeadline = async (id: string, deadline: string) => {
+    if (!updateChallenge) return;
+    await updateChallenge(id, { deadline });
+    setEditingDeadlineId(null);
   };
 
   const handleExpand = (challenge: any) => {
@@ -251,7 +270,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const handleSaveStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (editingStepTitle.trim() && updateChallengeStep) {
-      await updateChallengeStep(challenge.id, stepId, editingStepTitle.trim());
+      await updateChallengeStep(challenge.id, stepId, { title: editingStepTitle.trim() });
     }
     setEditingStepId(null);
   };
@@ -546,10 +565,33 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       {challenge.deadline && !challenge.completed && (() => {
                                         const status = getDeadlineStatus(challenge.deadline);
                                         return status ? (
-                                          <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${status.color}`}>
-                                            <Clock className="w-2.5 h-2.5" />
-                                            {formatDeadlineDate(challenge.deadline)} · {status.label}
-                                          </span>
+                                          <div className="relative">
+                                            {editingDeadlineId === challenge.id ? (
+                                              <input
+                                                type="date"
+                                                autoFocus
+                                                value={tempDeadline || challenge.deadline}
+                                                onChange={(e) => {
+                                                  setTempDeadline(e.target.value);
+                                                  saveDeadline(challenge.id, e.target.value);
+                                                }}
+                                                onBlur={() => setEditingDeadlineId(null)}
+                                                className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                              />
+                                            ) : (
+                                              <button 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingDeadlineId(challenge.id);
+                                                  setTempDeadline(challenge.deadline);
+                                                }}
+                                                className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 hover:brightness-110 active:scale-95 transition-all ${status.color}`}
+                                              >
+                                                <Clock className="w-2.5 h-2.5" />
+                                                {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                              </button>
+                                            )}
+                                          </div>
                                         ) : null;
                                       })()}
                                     </div>
@@ -558,10 +600,31 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                     const status = getDeadlineStatus(challenge.deadline);
                                     return status ? (
                                       <div className="mt-1">
-                                        <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 w-fit ${status.color}`}>
-                                          <Clock className="w-2.5 h-2.5" />
-                                          {formatDeadlineDate(challenge.deadline)} · {status.label}
-                                        </span>
+                                        {editingDeadlineId === challenge.id ? (
+                                          <input
+                                            type="date"
+                                            autoFocus
+                                            value={tempDeadline || challenge.deadline}
+                                            onChange={(e) => {
+                                              setTempDeadline(e.target.value);
+                                              saveDeadline(challenge.id, e.target.value);
+                                            }}
+                                            onBlur={() => setEditingDeadlineId(null)}
+                                            className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                                          />
+                                        ) : (
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingDeadlineId(challenge.id);
+                                              setTempDeadline(challenge.deadline);
+                                            }}
+                                            className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 w-fit hover:brightness-110 active:scale-95 transition-all ${status.color}`}
+                                          >
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                          </button>
+                                        )}
                                       </div>
                                     ) : null;
                                   })()}
@@ -684,14 +747,42 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                                     <span className={`font-medium text-[13px] transition-all flex-shrink ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
                                                       {step.title}
                                                     </span>
-                                                    {step.deadline && !step.completed && (() => {
-                                                      const status = getDeadlineStatus(step.deadline);
-                                                      return status ? (
-                                                        <span className={`text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded border flex-shrink-0 ${status.color}`}>
-                                                          {formatDeadlineDate(step.deadline)}
-                                                        </span>
-                                                      ) : null;
-                                                    })()}
+                                                    
+                                                    <div className="relative flex-shrink-0">
+                                                      {editingStepDeadlineId === step.id ? (
+                                                        <input
+                                                          type="date"
+                                                          autoFocus
+                                                          value={stepTempDeadline || step.deadline || ""}
+                                                          onChange={async (e) => {
+                                                            setStepTempDeadline(e.target.value);
+                                                            if (updateChallengeStep) {
+                                                              await updateChallengeStep(challenge.id, step.id, { deadline: e.target.value });
+                                                              setEditingStepDeadlineId(null);
+                                                            }
+                                                          }}
+                                                          onBlur={() => setEditingStepDeadlineId(null)}
+                                                          className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20 appearance-none h-5"
+                                                        />
+                                                      ) : (
+                                                        <button 
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingStepDeadlineId(step.id);
+                                                            setStepTempDeadline(step.deadline || "");
+                                                          }}
+                                                          className={cn(
+                                                            "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all active:scale-95",
+                                                            step.deadline 
+                                                              ? getDeadlineStatus(step.deadline)?.color 
+                                                              : "text-muted-foreground/60 border-border/50 hover:border-primary/30 hover:text-primary"
+                                                          )}
+                                                        >
+                                                          <Calendar className="w-2.5 h-2.5" />
+                                                          {step.deadline ? formatDeadlineDate(step.deadline) : "Add Date"}
+                                                        </button>
+                                                      )}
+                                                    </div>
                                                   </div>
                                                 )}
                                               </div>

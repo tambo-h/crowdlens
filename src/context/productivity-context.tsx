@@ -33,7 +33,7 @@ interface ProductivityContextType {
     expandChallengeDetails: (challengeId: string) => Promise<void>;
     abortExpansion: (challengeId: string) => void;
     addChallengeStep: (challengeId: string, title: string) => Promise<void>;
-    updateChallengeStep: (challengeId: string, stepId: string, title: string) => Promise<void>;
+    updateChallengeStep: (challengeId: string, stepId: string, updates: any) => Promise<void>;
     deleteChallengeStep: (challengeId: string, stepId: string) => Promise<void>;
 
     // Pomodoro
@@ -309,10 +309,10 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         await refreshChallenges(true);
     };
 
-    const handleUpdateChallengeStep = async (challengeId: string, stepId: string, title: string) => {
+    const handleUpdateChallengeStep = async (challengeId: string, stepId: string, updates: any) => {
         if (!userId) return;
         const { updateChallengeStep } = await import('@/services/productivity-service');
-        await updateChallengeStep(userId, { challengeId, stepId, title });
+        await updateChallengeStep(userId, { challengeId, stepId, updates });
         await refreshChallenges(true);
     };
 

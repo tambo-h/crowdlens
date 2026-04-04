@@ -205,12 +205,12 @@ export async function addChallengeStep(userId: string, input: { challengeId: str
 /**
  * Update a specific step's title
  */
-export async function updateChallengeStep(userId: string, input: { challengeId: string, stepId: string, title: string }): Promise<any> {
+export async function updateChallengeStep(userId: string, input: { challengeId: string, stepId: string, updates: Partial<ChallengeStep> }): Promise<any> {
   const keys = getKeys(userId);
   const challenges = await getChallenges(userId);
   const updated = challenges.map(c => {
     if (c.id === input.challengeId) {
-      const updatedSteps = c.steps.map(s => s.id === input.stepId ? { ...s, title: input.title } : s);
+      const updatedSteps = c.steps.map(s => s.id === input.stepId ? { ...s, ...input.updates } : s);
       return { ...c, steps: updatedSteps };
     }
     return c;

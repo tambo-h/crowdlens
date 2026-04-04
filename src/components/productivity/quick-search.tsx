@@ -48,7 +48,7 @@ export function QuickSearch() {
 
       // Match Steps
       challenge.steps?.forEach(step => {
-        if (step.title.toLowerCase().includes(q)) {
+        if (step.title?.toLowerCase().includes(q)) {
           items.push({
             id: step.id,
             type: "step",

@@ -265,15 +265,18 @@ export async function saveChallenge(userId: string, challenge: Omit<Challenge, "
 export async function batchSaveChallenges(userId: string, challengesToSave: Omit<Challenge, "id">[] = []): Promise<any> {
   const keys = getKeys(userId);
   const existing = await getChallenges(userId);
+  // Use a timestamp-based base order so new challenges always have higher orders than existing ones
+  const orderBase = existing.length > 0 ? Math.max(...existing.map(c => c.order)) + 1 : 0;
   const newChallenges: Challenge[] = (challengesToSave || []).map((c, i) => ({
     ...c,
     id: `ac_${Date.now()}_${i}`,
     completed: false,
     steps: c.steps || [],
     resources: c.resources || [],
-    order: existing.length + i
+    order: orderBase + i // Append at end — newest track = highest order = bottom of page
   }));
-  await redis.set(keys.skills, [...newChallenges, ...existing]);
+  // Append new challenges after existing ones
+  await redis.set(keys.skills, [...existing, ...newChallenges]);
   return { success: true, count: newChallenges.length };
 }
 
@@ -569,8 +572,12 @@ function isValidProductivityPrompt(prompt: string): boolean {
   if (forbiddenPatterns.some(p => lowercase.includes(p))) return false;
   
   // Must mention setup or workspace or be a role/skill
-  const validKeywords = ["setup", "workspace", "track", "skill", "learn", "plan", "developer", "designer", "diet", "habit", "study"];
-  return validKeywords.some(kw => lowercase.includes(kw)) || prompt.trim().split(" ").length <= 3;
+  const validKeywords = [
+    "setup", "workspace", "track", "skill", "learn", "plan", "developer", "designer", 
+    "diet", "habit", "study", "growth", "personal", "mastery", "anxiety", "focus", "meditation",
+    "income", "money", "side", "hustle", "career"
+  ];
+  return validKeywords.some(kw => lowercase.includes(kw)) || prompt.trim().split(" ").length <= 5;
 }
 
 /**
@@ -579,15 +586,7 @@ function isValidProductivityPrompt(prompt: string): boolean {
 export async function setupPersonalizedWorkspace(userId: string, input: { skill: string, experienceLevel?: string, projectType?: string, confirm?: boolean, data?: any }) {
   console.log("[Service] setupPersonalizedWorkspace CALLED");
   const { userId: actualUserId, input: actualInput } = normalizeArgs(userId, input);
-  console.log("[Service] normalized userId:", actualUserId, "normalized input:", actualInput);
-
-  if (!actualUserId) {
-    console.error("[Service] Missing userId in setupPersonalizedWorkspace");
-    return {
-      success: false,
-      message: "Security error: Workspace PIN missing. Please enter your PIN to continue."
-    };
-  }
+  if (!actualUserId) return { success: false, message: "User session not found." };
 
   const keys = getKeys(actualUserId);
 
@@ -608,113 +607,64 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     };
   }
 
-  if (!actualInput.confirm) {
-    console.log("[Productivity-Service] Starting AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
-    try {
-      const generated = await generatePersonalizedData(
-        actualInput.skill,
-        actualInput.experienceLevel,
-        actualInput.projectType,
-        new Date().toISOString().split('T')[0]
-      );
+  console.log("[Productivity-Service] Starting automated AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
+  try {
+    const generated = await generatePersonalizedData(
+      actualInput.skill,
+      actualInput.experienceLevel,
+      actualInput.projectType,
+      new Date().toISOString().split('T')[0]
+    );
 
-      // Increment Rate Limit on success
-      await redis.incr(keys.rate_limit);
-      await redis.expire(keys.rate_limit, 86400); // 24 hours
+    // 1. Increment Rate Limit
+    await redis.incr(keys.rate_limit);
+    await redis.expire(keys.rate_limit, 86400);
 
-      // Store draft in Redis temporarily (expiring in 30 minutes)
-      await redis.set(keys.setup_draft, generated, { ex: 1800 });
-      console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
+    // 2. Batch Save Challenges
+    const challenges = generated.habits || [];
+    const links = generated.links || [];
+    
+    await batchSaveChallenges(actualUserId, challenges.map((h: any, i: number) => ({
+      title: h.name,
+      completed: false,
+      steps: [],
+      resources: [],
+      role: actualInput.skill,
+      order: i,
+      deadline: h.deadline || undefined
+    })));
 
-      const habitList = (generated.habits || []).map(h => `- **${h.name}**${h.deadline ? ` _(by ${h.deadline})_` : ''}`).slice(0, 5).join("\n");
-      const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
-      const trackDeadlineMsg = generated.trackDeadline ? `\n\n📅 **Track Deadline**: ${generated.trackDeadline}` : '';
+    // 3. Batch Save Links
+    await batchSaveLinks(actualUserId, links);
 
-      return {
-        message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.${trackDeadlineMsg}\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?\n\n> 💡 **Action Required**: Respond with **"apply"** or click the **"Apply Setup Now"** button above to finalize your workspace.`,
-        suggestions: ["apply"],
-        interactive: {
-          name: "WorkspacePreview",
-          props: {
-            role: actualInput.skill,
-            habits: generated.habits || [],
-            links: generated.links || [],
-            rules: generated.rules || [],
-            trackDeadline: generated.trackDeadline || undefined
-          }
-        },
-        render: {
-          name: "WorkspacePreview",
-          props: {
-            role: actualInput.skill,
-            habits: generated.habits || [],
-            links: generated.links || [],
-            rules: generated.rules || [],
-            trackDeadline: generated.trackDeadline || undefined
-          }
-        },
-        component: {
-          name: "WorkspacePreview",
-          props: {
-            role: actualInput.skill,
-            habits: generated.habits || [],
-            links: generated.links || [],
-            rules: generated.rules || [],
-            trackDeadline: generated.trackDeadline || undefined
-          }
-        }
-      };
-    } catch (error: any) {
-      console.error("[Productivity-Service] AI Setup failed:", error);
-      return {
-        success: false,
-        message: `### ❌ AI Generation Failed\n\n${error.message || "An unexpected error occurred during AI generation."}\n\n**Common fixes:**\n- Check if \`OPENROUTER_API_KEY\` is set in your environment variables.\n- Ensure you have an internet connection.\n- Try again in a few moments.`
-      };
+    // 4. Save track-level deadline
+    if (generated.trackDeadline) {
+      const deadlines = await redis.get<Record<string, string>>(keys.track_deadline) || {};
+      deadlines[actualInput.skill] = generated.trackDeadline;
+      await redis.set(keys.track_deadline, deadlines);
     }
-  }
 
-  console.log("[Productivity-Service] Confirming setup for user:", actualUserId);
-
-  // Retrieve from Redis
-  const draft = await redis.get<any>(keys.setup_draft);
-  if (!draft) {
-    console.error("[Productivity-Service] No draft found in Redis for user:", actualUserId);
+    return {
+      success: true,
+      message: `### ✨ Workspace Optimized!\n\nI've automatically configured your workspace for **${actualInput.skill}**. Your new growth tracks and resources are now live and synced across your OS.`,
+      interactive: {
+        name: "WorkspacePreview",
+        props: {
+          role: actualInput.skill,
+          habits: generated.habits || [],
+          links: generated.links || [],
+          rules: generated.rules || [],
+          trackDeadline: generated.trackDeadline || undefined
+        }
+      }
+    };
+  } catch (error: any) {
+    console.error("[Productivity-Service] AI Setup failed:", error);
     return {
       success: false,
-      message: `The workspace setup didn’t save because your session expired. Please resend your role (just confirm: “${actualInput.skill}”), and I’ll run the setup again.\n\nIf you want it tailored, add one line with:\n- your **level** (junior/mid/senior)\n- what you’re **building** (SaaS, e-commerce, content site, internal tool).`
+      message: `### ❌ Optimization Failed\n\n${error.message || "An unexpected error occurred."}`
     };
   }
-
-  const challenges = draft.habits || [];
-  const links = draft.links || [];
-  console.log("[Productivity-Service] Applying setup from draft - Challenges:", challenges.length, "Links:", links.length);
-
-  await batchSaveChallenges(actualUserId, challenges.map((h: any, i: number) => ({
-    title: h.name,
-    completed: false,
-    steps: [],
-    resources: [],
-    role: actualInput.skill,
-    order: i,
-    deadline: h.deadline || undefined
-  })));
-  await batchSaveLinks(actualUserId, links);
-
-  // Save track-level deadline if provided
-  if (draft.trackDeadline) {
-    const trackDeadlineKeys = getKeys(actualUserId);
-    const deadlines = await redis.get<Record<string, string>>(trackDeadlineKeys.track_deadline) || {};
-    deadlines[actualInput.skill] = draft.trackDeadline;
-    await redis.set(trackDeadlineKeys.track_deadline, deadlines);
-  }
-
-  // Cleanup
-  await redis.del(keys.setup_draft);
-
-  return {
-    success: true,
-    message: `Awesome! Your workspace is now optimized for a ${actualInput.skill}. Your new skills and resources have been added.`
-  };
 }
 
 export async function getPomodoroStats(userId: string, input: any = {}) {

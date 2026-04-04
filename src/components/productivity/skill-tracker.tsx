@@ -223,7 +223,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     return acc;
   }, {});
 
-  const sortedRoles = Object.keys(groups).sort();
+  // Sort roles by the minimum challenge order — oldest track first, newest at bottom
+  const sortedRoles = Object.keys(groups).sort((a, b) => {
+    const minA = Math.min(...groups[a].map((c: any) => c.order));
+    const minB = Math.min(...groups[b].map((c: any) => c.order));
+    return minA - minB;
+  });
 
   const handleAdd = async (role: string) => {
     if (!newTitle.trim() || !userId) return;
@@ -350,7 +355,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
           const isCollapsed = collapsedRoles.includes(role);
 
           return (
-            <div key={role} className="glass-panel rounded-2xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl">
+            <div
+              key={role}
+              id={`track-${role.toLowerCase().replace(/\s+/g, '-')}`}
+              data-role-track={role}
+              className="glass-panel rounded-2xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl"
+            >
               {/* Progress Banner */}
               <div
                 className="bg-primary/5 px-6 py-4 border-b border-border/50 flex justify-between items-center group/track cursor-pointer hover:bg-primary/10 transition-colors"

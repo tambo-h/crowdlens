@@ -34,7 +34,8 @@ import {
   Menu,
   XIcon,
   Moon,
-  Sun
+  Sun,
+  Loader2
 } from "lucide-react";
 
 // Creative tool imports
@@ -50,8 +51,30 @@ import { QuickSearch } from "@/components/productivity/quick-search";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
 import { AppOnboarding } from "@/components/ui/app-onboarding";
 
+const GlobalLoadingOverlay = ({ isProcessingAI }: { isProcessingAI: boolean }) => {
+  if (!isProcessingAI) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md transition-all duration-300">
+      <div className="flex flex-col items-center gap-6 p-12 rounded-[3rem] bg-card border border-primary/20 shadow-2xl scale-110">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+          <Loader2 className="w-12 h-12 text-primary animate-spin relative z-10" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black tracking-tighter text-foreground uppercase tracking-widest">
+            AI is Processing...
+          </h2>
+          <p className="text-sm font-medium text-muted-foreground max-w-[200px] leading-relaxed italic">
+            Configuring your workspace for peak performance. Please wait.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm, lastSetupRole, setLastSetupRole } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   const [isDarkPref, setIsDarkPref] = React.useState(false);
@@ -67,6 +90,28 @@ function HomeContent() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
+
+  // Seamless redirect + scroll to newly created skill track
+  React.useEffect(() => {
+    if (!lastSetupRole) return;
+    // Navigate to Skills Track page
+    setActiveView('skills');
+    // After navigation, scroll to the newly added track (at the bottom of the page)
+    const scrollTimeout = setTimeout(() => {
+      // Find the last role track header (newest = last in DOM after sort)
+      const allTrackHeaders = document.querySelectorAll('[data-role-track]');
+      const lastTrack = allTrackHeaders[allTrackHeaders.length - 1];
+      if (lastTrack) {
+        lastTrack.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // Fallback: scroll to bottom of skills container
+        const mainEl = document.getElementById('main-scroll');
+        if (mainEl) mainEl.scrollTo({ top: mainEl.scrollHeight, behavior: 'smooth' });
+      }
+      setLastSetupRole(null);
+    }, 600);
+    return () => clearTimeout(scrollTimeout);
+  }, [lastSetupRole, setActiveView, setLastSetupRole]);
 
   // Auto-open chat for new users to guide onboarding
   React.useEffect(() => {
@@ -204,7 +249,7 @@ function HomeContent() {
 
       {/* Main Content */}
       <main 
-        id="main-scroll-container"
+        id="main-scroll"
         className={cn(
         "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
         isChatOpen ? "xl:mr-[400px]" : "mr-0"
@@ -360,7 +405,7 @@ function HomeContent() {
 
 
 const TamboProviderWithContext = () => {
-  const { triggerCreativeRefresh, userId } = useProductivity();
+  const { triggerCreativeRefresh, userId, isProcessingAI, setIsProcessingAI, setLastSetupRole } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
     // All tools that take (userId, input) should be wrapped
@@ -383,9 +428,19 @@ const TamboProviderWithContext = () => {
             return { error: "Please log in first." };
           }
           // Inject userId as first argument
-          const res = await (t.tool as any)(userId, ...args);
-          triggerCreativeRefresh();
-          return res;
+          setIsProcessingAI(true);
+          try {
+            const res = await (t.tool as any)(userId, ...args);
+            triggerCreativeRefresh();
+            // After workspace setup, trigger seamless redirect to skill track
+            if (t.name === 'setupPersonalizedWorkspace' && res?.success) {
+              const skill = args[0]?.skill || args[0];
+              if (skill) setLastSetupRole(typeof skill === 'string' ? skill : skill.skill || '');
+            }
+            return res;
+          } finally {
+            setIsProcessingAI(false);
+          }
         }
       };
     }
@@ -399,7 +454,10 @@ const TamboProviderWithContext = () => {
       tools={augmentedTools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      <HomeContent />
+      <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-50 grayscale select-none")}>
+        <HomeContent />
+      </div>
+      <GlobalLoadingOverlay isProcessingAI={isProcessingAI} />
     </TamboProvider>
   );
 };

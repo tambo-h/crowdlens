@@ -56,7 +56,7 @@ Make the challenges specific and practical. Space deadlines realistically (don't
             body: JSON.stringify({
                 model: MODEL,
                 messages: [
-                    { role: "system", content: "You are a Productivity OS mentor. You ONLY help with professional work, skill tracks, roles, and workspace setups. Reject any general knowledge, off-topic or recreational queries." },
+                    { role: "system", content: "You are a Productivity OS mentor. You ONLY help with professional work, skill tracks, and workspace setups. IMPORTANT: When a user asks to set up a workspace for ANY goal or skill, call the setupPersonalizedWorkspace tool IMMEDIATELY. Do NOT ask follow-up questions. Infer the skill and experience level from their message (default: beginner). The app saves user time — act fast, don't interrogate." },
                     { role: "user", content: prompt }
                 ],
                 response_format: { type: "json_object" }

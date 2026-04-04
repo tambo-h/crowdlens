@@ -58,6 +58,12 @@ interface ProductivityContextType {
     // Creative Tools Sync
     creativeRefreshTrigger: number;
     triggerCreativeRefresh: () => void;
+    isProcessingAI: boolean;
+    setIsProcessingAI: (val: boolean) => void;
+
+    // Workspace Setup Redirect
+    lastSetupRole: string | null;
+    setLastSetupRole: (role: string | null) => void;
 
     // Energy Awareness
     currentEnergy: number | null;
@@ -100,6 +106,8 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [expandingIds, setExpandingIds] = useState<string[]>([]);
     const cancelledExpansions = React.useRef<Set<string>>(new Set());
     const [trackDeadlines, setTrackDeadlines] = useState<Record<string, string>>({});
+    const [isProcessingAI, setIsProcessingAI] = useState(false);
+    const [lastSetupRole, setLastSetupRole] = useState<string | null>(null);
 
     // Pomodoro state
     const [pomodoro, setPomodoro] = useState<PomodoroState>({
@@ -153,20 +161,25 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     }, [userId, triggerCreativeRefresh]);
 
     const onboardGuest = useCallback(async () => {
-        let isUnique = false;
-        let guestId = "";
+        setIsProcessingAI(true);
+        try {
+            let isUnique = false;
+            let guestId = "";
 
-        // Retry loop to ensure PIN uniqueness
-        while (!isUnique) {
-            const pin = Math.floor(100000 + Math.random() * 900000).toString();
-            guestId = `up_${pin}`;
-            const exists = await checkUserExistence(guestId);
-            if (!exists) {
-                isUnique = true;
+            // Retry loop to ensure PIN uniqueness
+            while (!isUnique) {
+                const pin = Math.floor(100000 + Math.random() * 900000).toString();
+                guestId = `up_${pin}`;
+                const exists = await checkUserExistence(guestId);
+                if (!exists) {
+                    isUnique = true;
+                }
             }
-        }
 
-        setUserId(guestId);
+            setUserId(guestId);
+        } finally {
+            setIsProcessingAI(false);
+        }
     }, []);
 
     const refreshChallenges = useCallback(async (background = false) => {
@@ -396,26 +409,22 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     return (
         <ProductivityContext.Provider value={{
+            userId, setUserId, onboardGuest,
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails, abortExpansion,
-            saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
-            deleteRoleTrack: handleDeleteRoleTrack,
+            saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge, deleteRoleTrack: handleDeleteRoleTrack,
             addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,
             pomodoro: {
                 ...pomodoro,
                 sessionsCompleted: pomodoro.sessionsToday,
             },
             startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
-            activeView, setActiveView, isChatOpen, setIsChatOpen,
-            expandedId, setExpandedId,
-            collapsedRoles, setCollapsedRoles,
+            activeView, setActiveView, isChatOpen, setIsChatOpen, expandedId, setExpandedId, collapsedRoles, setCollapsedRoles,
             creativeRefreshTrigger, triggerCreativeRefresh,
-            userId, setUserId, onboardGuest,
             currentEnergy, refreshCurrentEnergy, logEnergyLevel: handleLogEnergyLevel,
-            trackDeadlines,
-            setTrackDeadline: handleSetTrackDeadline,
-            confirmState,
-            openConfirm,
-            closeConfirm
+            trackDeadlines, setTrackDeadline: handleSetTrackDeadline,
+            confirmState, openConfirm, closeConfirm,
+            isProcessingAI, setIsProcessingAI,
+            lastSetupRole, setLastSetupRole
         }}>
             {children}
         </ProductivityContext.Provider>

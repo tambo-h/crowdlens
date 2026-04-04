@@ -7,6 +7,7 @@ interface PomodoroState {
     timeLeft: number;
     sessionType: "work" | "break" | "longBreak";
     sessionsCompleted: number;
+    sessionsToday: number;
     workDuration: number;
     breakDuration: number;
     longBreakDuration: number;
@@ -49,6 +50,10 @@ interface ProductivityContextType {
     setActiveView: (view: string) => void;
     isChatOpen: boolean;
     setIsChatOpen: (open: boolean) => void;
+    expandedId: string | null;
+    setExpandedId: (id: string | null) => void;
+    collapsedRoles: string[];
+    setCollapsedRoles: (roles: string[] | ((prev: string[]) => string[])) => void;
 
     // Creative Tools Sync
     creativeRefreshTrigger: number;
@@ -62,6 +67,18 @@ interface ProductivityContextType {
     // Track Deadlines
     trackDeadlines: Record<string, string>;
     setTrackDeadline: (role: string, deadline: string) => Promise<void>;
+
+    // Global Confirmation
+    confirmState: {
+        isOpen: boolean;
+        title: string;
+        message: string | React.ReactNode;
+        onConfirm: () => void | Promise<void>;
+        confirmText?: string;
+        type?: "danger" | "info";
+    };
+    openConfirm: (config: { title: string, message: string | React.ReactNode, onConfirm: () => void | Promise<void>, confirmText?: string, type?: "danger" | "info" }) => void;
+    closeConfirm: () => void;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -69,6 +86,8 @@ const ProductivityContext = createContext<ProductivityContextType | undefined>(u
 export function ProductivityProvider({ children }: { children: React.ReactNode }) {
     const [userId, setUserId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState("dashboard");
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [creativeRefreshTrigger, setCreativeRefreshTrigger] = useState(0);
 
@@ -88,9 +107,26 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         timeLeft: 25 * 60,
         sessionType: "work",
         sessionsCompleted: 0,
+        sessionsToday: 0,
         workDuration: 25,
         breakDuration: 5,
         longBreakDuration: 15,
+    });
+
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string | React.ReactNode;
+        onConfirm: () => void | Promise<void>;
+        confirmText?: string;
+        type?: "danger" | "info";
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => {},
+        confirmText: "Confirm",
+        type: "danger"
     });
 
     // Load userId from localStorage on mount
@@ -343,24 +379,43 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         return () => clearInterval(interval);
     }, [pomodoro.isRunning, tickPomodoro]);
 
+    const handleSetTrackDeadline = async (role: string, deadline: string) => {
+        if (!userId) return;
+        const { setTrackDeadline: setTrackDeadlineService } = await import("@/services/productivity-service");
+        await setTrackDeadlineService(userId, role, deadline);
+        setTrackDeadlines(prev => ({ ...prev, [role]: deadline }));
+    };
+
+    const openConfirm = useCallback((config: any) => {
+        setConfirmState({ ...config, isOpen: true });
+    }, []);
+
+    const closeConfirm = useCallback(() => {
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+    }, []);
+
     return (
         <ProductivityContext.Provider value={{
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails, abortExpansion,
             saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
             deleteRoleTrack: handleDeleteRoleTrack,
             addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,
-            pomodoro, startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
+            pomodoro: {
+                ...pomodoro,
+                sessionsCompleted: pomodoro.sessionsToday,
+            },
+            startPomodoro, pausePomodoro, resetPomodoro, tickPomodoro, updatePomodoroDurations,
             activeView, setActiveView, isChatOpen, setIsChatOpen,
+            expandedId, setExpandedId,
+            collapsedRoles, setCollapsedRoles,
             creativeRefreshTrigger, triggerCreativeRefresh,
             userId, setUserId, onboardGuest,
             currentEnergy, refreshCurrentEnergy, logEnergyLevel: handleLogEnergyLevel,
             trackDeadlines,
-            setTrackDeadline: async (role, deadline) => {
-                if (!userId) return;
-                const { setTrackDeadline: setTrackDeadlineService } = await import("@/services/productivity-service");
-                await setTrackDeadlineService(userId, role, deadline);
-                setTrackDeadlines(prev => ({ ...prev, [role]: deadline }));
-            }
+            setTrackDeadline: handleSetTrackDeadline,
+            confirmState,
+            openConfirm,
+            closeConfirm
         }}>
             {children}
         </ProductivityContext.Provider>

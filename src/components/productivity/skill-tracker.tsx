@@ -6,11 +6,12 @@
 "use client";
 
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
+import { ContextHelp } from "@/components/ui/context-help";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -43,12 +44,16 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     deleteChallengeStep,
     deleteRoleTrack,
     trackDeadlines,
-    setTrackDeadline
+    setTrackDeadline,
+    expandedId,
+    setExpandedId,
+    collapsedRoles,
+    setCollapsedRoles,
+    openConfirm,
+    closeConfirm
   } = useProductivity();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
 
   // Persistent expansion state
   useEffect(() => {
@@ -121,9 +126,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const [newStepTitle, setNewStepTitle] = useState("");
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const didInitRef = useRef(false);
 
   // Initialize collapsed states once when challenges load
-  useState(() => {
+  useEffect(() => {
+    if (didInitRef.current || challenges.length === 0) return;
+    
     const savedExpandedId = sessionStorage.getItem("taskstack_expanded_id");
     const expandedChallenge = challenges.find(c => c.id === savedExpandedId);
     const expandedRole = expandedChallenge?.role || "General";
@@ -133,7 +141,8 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
       // Keep only the first one expanded, UNLESS another one contains the expanded task
       setCollapsedRoles(roles.filter(r => r !== roles[0] && r !== expandedRole));
     }
-  });
+    didInitRef.current = true;
+  }, [challenges, setCollapsedRoles]);
 
   // Ensure expanded task's role is never collapsed
   useEffect(() => {
@@ -153,9 +162,9 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     now.setHours(0, 0, 0, 0);
     const dl = new Date(deadline + 'T00:00:00');
     const diffDays = Math.ceil((dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-red-500 bg-red-500/10 border-red-500/20', icon: '🔴' };
-    if (diffDays <= 2) return { label: diffDays === 0 ? 'Due today' : `${diffDays}d left`, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: '🟡' };
-    return { label: `${diffDays}d left`, color: 'text-muted-foreground bg-muted/50 border-border', icon: '🟢' };
+    if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-rose-500 bg-rose-500/10 border-rose-500/30 font-black shadow-[0_2px_10px_-2px_rgba(244,63,94,0.2)]', icon: '🔴' };
+    if (diffDays <= 2) return { label: diffDays === 0 ? 'Due today' : `${diffDays}d left`, color: 'text-orange-500 bg-orange-500/10 border-orange-500/30 font-black shadow-[0_2px_10px_-2px_rgba(249,115,22,0.2)]', icon: '🟡' };
+    return { label: `${diffDays}d left`, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30 font-black shadow-[0_2px_10px_-2px_rgba(16,185,129,0.1)]', icon: '🟢' };
   };
 
   const formatDeadlineDate = (deadline?: string) => {
@@ -215,9 +224,14 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
   const handleDeleteMainTask = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Delete this main task?")) {
-      if (deleteChallenge) await deleteChallenge(id);
-    }
+    openConfirm({
+      title: "Delete Challenge?",
+      message: "This will permanently remove this challenge and all its action steps.",
+      confirmText: "Delete Task",
+      onConfirm: async () => {
+        if (deleteChallenge) await deleteChallenge(id);
+      }
+    });
   };
 
   const handleStartEditMainTask = (challenge: any, e: React.MouseEvent) => {
@@ -271,10 +285,17 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const handleDeleteResource = async (challenge: any, url: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Delete this resource?") && updateChallenge) {
-      const resources = challenge.resources.filter((r: any) => r.url !== url);
-      await updateChallenge(challenge.id, { resources });
-    }
+    openConfirm({
+      title: "Remove Resource?",
+      message: "Are you sure you want to remove this learning resource? You can add it back later if needed.",
+      confirmText: "Remove",
+      onConfirm: async () => {
+        if (updateChallenge) {
+          const resources = challenge.resources.filter((r: any) => r.url !== url);
+          await updateChallenge(challenge.id, { resources });
+        }
+      }
+    });
   };
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -286,6 +307,10 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
         <div>
           <h2 className="text-2xl font-black tracking-tighter text-foreground flex items-center gap-2">
              Skill Track
+             <ContextHelp 
+               title="What is a Skill Track?" 
+               description="Your AI-generated growth roadmap. It breaks down complex roles into manageable milestones and concrete action steps." 
+             />
           </h2>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em]">{today}</p>
         </div>
@@ -316,6 +341,10 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                     <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
                       <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
                       {role} Track
+                      <ContextHelp 
+                        title="Dynamic Strategies" 
+                        description="The AI dynamically calculates the best way to approach this specific challenge based on the current date and your experience level."
+                      />
                     </h2>
                     {trackDeadlines[role] && (
                       <div className="flex items-center gap-2 ml-4">
@@ -337,9 +366,19 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete entire ${role} track? This cannot be undone.`)) {
-                        deleteRoleTrack && deleteRoleTrack(role);
-                      }
+                      openConfirm({
+                        title: "Delete Skill Track?",
+                        message: (
+                          <>
+                            Are you sure you want to delete the <span className="font-bold text-foreground">"{role}"</span> track? 
+                            This will remove everything and cannot be undone.
+                          </>
+                        ),
+                        confirmText: "Destroy Track",
+                        onConfirm: async () => {
+                          if (deleteRoleTrack) await deleteRoleTrack(role);
+                        }
+                      });
                     }}
                     className="p-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/track:opacity-100 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all rounded-lg"
                     title="Delete entire track"

@@ -46,10 +46,12 @@ import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-re
 
 import { Onboarding } from "@/components/auth/onboarding";
 import { ProfileMenu } from "@/components/auth/profile-menu";
+import { QuickSearch } from "@/components/productivity/quick-search";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
+import { AppOnboarding } from "@/components/ui/app-onboarding";
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   const [isDarkPref, setIsDarkPref] = React.useState(false);
@@ -215,10 +217,15 @@ function HomeContent() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground hidden lg:block">
               {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
             </h2>
           </div>
+
+          <div className="flex-1 flex justify-center max-w-xl px-4">
+            <QuickSearch />
+          </div>
+
           <div className="flex items-center gap-4">
             {currentEnergy !== null && (
             <div className={cn(
@@ -289,6 +296,64 @@ function HomeContent() {
 
       {/* Chat Side Panel */}
       <ChatSidePanel />
+
+      {/* Global Confirmation Modal */}
+      <AnimatePresence>
+        {confirmState.isOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 isolate">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeConfirm}
+              className="absolute inset-0 bg-background/80 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-card border border-border/80 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] rounded-[3rem] p-8 text-center"
+            >
+              <div className={cn(
+                "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner",
+                confirmState.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary"
+              )}>
+                <AlertOctagon className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-black text-foreground mb-3 tracking-tight">{confirmState.title}</h3>
+              <div className="text-sm font-medium text-muted-foreground mb-10 leading-relaxed px-2">
+                {confirmState.message}
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    await confirmState.onConfirm();
+                    closeConfirm();
+                  }}
+                  className={cn(
+                    "w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all shadow-2xl active:scale-[0.98] outline-none",
+                    confirmState.type === "danger" 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" 
+                      : "bg-primary hover:bg-primary/110 text-primary-foreground shadow-primary/20"
+                  )}
+                >
+                  {confirmState.confirmText || "Confirm"}
+                </button>
+                <button
+                  onClick={closeConfirm}
+                  className="w-full py-5 bg-muted/50 hover:bg-muted text-muted-foreground rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] outline-none border border-border/50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* First-time Tutorial Onboarding */}
+      <AppOnboarding />
     </div>
   );
 }

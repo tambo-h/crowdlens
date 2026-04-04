@@ -57,6 +57,10 @@ interface ProductivityContextType {
     currentEnergy: number | null;
     refreshCurrentEnergy: () => Promise<void>;
     logEnergyLevel: (input: { level: number, notes?: string }) => Promise<void>;
+
+    // Track Deadlines
+    trackDeadlines: Record<string, string>;
+    setTrackDeadline: (role: string, deadline: string) => Promise<void>;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -74,6 +78,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [challenges, setChallenges] = useState<Challenge[]>([]);
     const [isLoadingChallenges, setIsLoadingChallenges] = useState(false);
     const [expandingIds, setExpandingIds] = useState<string[]>([]);
+    const [trackDeadlines, setTrackDeadlines] = useState<Record<string, string>>({});
 
     // Pomodoro state
     const [pomodoro, setPomodoro] = useState<PomodoroState>({
@@ -135,6 +140,11 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         try {
             const data = await getChallenges(userId);
             setChallenges(data || []);
+
+            // Also refresh track deadlines
+            const { getAllTrackDeadlines } = await import("@/services/productivity-service");
+            const deadlines = await getAllTrackDeadlines(userId);
+            setTrackDeadlines(deadlines);
         } catch (err) {
             console.error("Failed to fetch challenges", err);
         } finally {
@@ -326,7 +336,14 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
             activeView, setActiveView, isChatOpen, setIsChatOpen,
             creativeRefreshTrigger, triggerCreativeRefresh,
             userId, setUserId, onboardGuest,
-            currentEnergy, refreshCurrentEnergy, logEnergyLevel: handleLogEnergyLevel
+            currentEnergy, refreshCurrentEnergy, logEnergyLevel: handleLogEnergyLevel,
+            trackDeadlines,
+            setTrackDeadline: async (role, deadline) => {
+                if (!userId) return;
+                const { setTrackDeadline: setTrackDeadlineService } = await import("@/services/productivity-service");
+                await setTrackDeadlineService(userId, role, deadline);
+                setTrackDeadlines(prev => ({ ...prev, [role]: deadline }));
+            }
         }}>
             {children}
         </ProductivityContext.Provider>

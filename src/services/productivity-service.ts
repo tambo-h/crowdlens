@@ -58,6 +58,7 @@ const getKeys = (userId: string) => ({
   practiced_rules: `practiced_rules:${userId}`,
   is_seeded: `is_seeded:${userId}`,
   setup_draft: `setup_draft:${userId}`,
+  track_deadline: `track_deadline:${userId}`,
 });
 
 /**
@@ -112,6 +113,7 @@ export interface Challenge {
   role: string;
   order: number;
   completedAt?: string;
+  deadline?: string;
 }
 
 /**
@@ -283,6 +285,34 @@ export async function deleteRoleTrack(userId: string, role: string): Promise<any
   const updated = challenges.filter(c => c.role !== role);
   await redis.set(keys.skills, updated);
   return { success: true };
+}
+
+/**
+ * Get the overall deadline for a specific role/track
+ */
+export async function getTrackDeadline(userId: string, role: string): Promise<string | null> {
+  const keys = getKeys(userId);
+  const deadlines = await redis.get<Record<string, string>>(keys.track_deadline) || {};
+  return deadlines[role] || null;
+}
+
+/**
+ * Set the overall deadline for a specific role/track
+ */
+export async function setTrackDeadline(userId: string, role: string, deadline: string): Promise<any> {
+  const keys = getKeys(userId);
+  const deadlines = await redis.get<Record<string, string>>(keys.track_deadline) || {};
+  deadlines[role] = deadline;
+  await redis.set(keys.track_deadline, deadlines);
+  return { success: true };
+}
+
+/**
+ * Get all track deadlines for a user
+ */
+export async function getAllTrackDeadlines(userId: string): Promise<Record<string, string>> {
+  const keys = getKeys(userId);
+  return await redis.get<Record<string, string>>(keys.track_deadline) || {};
 }
 
 /**

@@ -104,7 +104,7 @@ export function ProductivityDashboard({
           <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <motion.h1
-                className="text-4xl md:text-5xl font-black text-foreground mb-3 tracking-tight"
+                className="text-3xl md:text-5xl font-black text-foreground mb-3 tracking-tight"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
@@ -231,7 +231,7 @@ export function ProductivityDashboard({
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-6">
                 <Zap className="w-3 h-3" /> Daily Insight
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-foreground mb-6 leading-tight italic">
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-6 leading-tight italic">
                 "{quote?.text}"
               </p>
               <div className="flex items-center justify-between border-t border-border/50 pt-6 mt-4">
@@ -291,7 +291,7 @@ export function ProductivityDashboard({
                   Your local-first data is encrypted. Use this unique PIN to sync your workspace across devices.
                 </p>
                 <div className="mt-auto flex items-center justify-between p-5 bg-black/20 backdrop-blur-md rounded-2xl border border-white/5">
-                  <span className="text-3xl font-black tracking-[0.4em] text-white">
+                  <span className="text-xl sm:text-3xl font-black tracking-[0.3em] sm:tracking-[0.4em] text-white">
                     {userId?.replace("up_", "") || "000000"}
                   </span>
                   <button
@@ -315,8 +315,10 @@ export function ProductivityDashboard({
               </h3>
               <div className="space-y-4">
                 {[
+                  { label: "Spanish", prompt: "setup my workspace for learning Spanish", icon: "🚗" },
+                  { label: "Sugar-Free", prompt: "setup my workspace for quitting sugar", icon: "🚫" },
+                  { label: "High Protein", prompt: "setup a plan to do high protein diet", icon: "🥩" },
                   { label: "Core Developer", prompt: "setup my workspace as a nextjs developer", icon: "🚀" },
-                  { label: "Strategic Lead", prompt: "setup my workspace as a business analyst", icon: "📊" },
                 ].map((ex) => (
                   <button
                     key={ex.label}
@@ -330,7 +332,7 @@ export function ProductivityDashboard({
                       <span className="text-2xl">{ex.icon}</span>
                       <div>
                         <p className="text-xs font-black text-foreground uppercase tracking-widest mb-1">{ex.label}</p>
-                        <p className="text-[11px] text-muted-foreground italic truncate max-w-[180px]">"{ex.prompt}"</p>
+                        <p className="text-[11px] text-muted-foreground italic truncate max-w-[140px] sm:max-w-[180px]">"{ex.prompt}"</p>
                       </div>
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />

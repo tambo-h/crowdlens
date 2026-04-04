@@ -133,7 +133,7 @@ export function PomodoroTimer({
     <motion.div
       initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
       animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-      className="bg-card/40 backdrop-blur-xl rounded-[3rem] p-10 border border-border shadow-2xl max-w-lg w-full mx-auto relative overflow-hidden group"
+      className="bg-card/40 backdrop-blur-xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 border border-border shadow-2xl max-w-lg w-full mx-auto relative overflow-hidden group"
     >
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
 
@@ -149,7 +149,7 @@ export function PomodoroTimer({
       </div>
 
       {/* Circular Progress */}
-      <div className="relative w-80 h-80 mx-auto mb-10">
+      <div className="relative w-52 h-52 sm:w-72 sm:h-72 md:w-80 md:h-80 mx-auto mb-6 sm:mb-10">
         <motion.div
           animate={{ rotate: isRunning ? 360 : 0 }}
           transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
@@ -179,7 +179,7 @@ export function PomodoroTimer({
             key={timeLeft}
             initial={{ scale: 0.95, opacity: 0.8 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-7xl font-black text-foreground tabular-nums tracking-tighter"
+            className="text-5xl sm:text-7xl font-black text-foreground tabular-nums tracking-tighter"
           >
             {formatTime(timeLeft)}
           </motion.span>
@@ -190,13 +190,13 @@ export function PomodoroTimer({
       </div>
 
       {/* Controls */}
-      <div className="flex gap-4 justify-center mb-10">
+      <div className="flex gap-3 sm:gap-4 justify-center mb-6 sm:mb-10">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleStartPause}
           className={cn(
-            "h-16 px-10 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl",
+            "h-14 sm:h-16 px-6 sm:px-10 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all shadow-xl",
             isRunning
               ? "bg-accent text-accent-foreground shadow-accent/20"
               : "bg-primary text-primary-foreground shadow-primary/20"
@@ -208,7 +208,7 @@ export function PomodoroTimer({
           whileHover={{ scale: 1.05, rotate: 180 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => resetPomodoro()}
-          className="w-16 h-16 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
+          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
         >
           <RotateCcw className="w-5 h-5" />
         </motion.button>

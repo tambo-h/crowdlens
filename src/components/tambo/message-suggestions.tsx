@@ -357,7 +357,7 @@ const MessageSuggestionsList = React.forwardRef<
             >
               <button
                 className={cn(
-                  "py-2 px-2.5 rounded-2xl text-xs transition-colors",
+                  "py-2 px-2.5 rounded-2xl text-xs whitespace-nowrap transition-colors",
                   "border border-flat",
                   getSuggestionButtonClassName({
                     isGenerating,

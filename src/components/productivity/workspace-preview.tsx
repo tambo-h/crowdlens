@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, Link as LinkIcon, BookOpen, Sparkles, Check } from "lucide-react";
 import { withInteractable, useTamboThreadInput } from "@tambo-ai/react";
 import { cn } from "@/lib/utils";
+import { useProductivity } from "@/context/productivity-context";
 
 export const workspacePreviewSchema = z.object({
     role: z.string(),
@@ -97,6 +98,7 @@ export function WorkspacePreview({ role, habits = [], links = [], rules = [] }: 
 
 function ApplyButton() {
     const { setValue, submit } = useTamboThreadInput();
+    const { setActiveView } = useProductivity();
 
     return (
         <button
@@ -104,6 +106,7 @@ function ApplyButton() {
                 setValue("apply");
                 setTimeout(() => {
                     submit({ resourceNames: {} });
+                    setActiveView("skills");
                 }, 100);
             }}
             className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"

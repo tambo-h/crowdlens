@@ -97,6 +97,39 @@ function HomeContent() {
       "flex h-screen overflow-hidden transition-colors duration-1000 relative",
       isLowEnergy ? "bg-black" : "bg-background"
     )}>
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border flex items-center justify-around h-16 px-2 safe-area-bottom">
+        {[
+          { id: "dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Home" },
+          { id: "pomodoro", icon: <Timer className="w-5 h-5" />, label: "Focus" },
+          { id: "skills", icon: <CheckSquare className="w-5 h-5" />, label: "Skills" },
+          { id: "links", icon: <LinkIcon className="w-5 h-5" />, label: "Links" },
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => setActiveView(item.id)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all active:scale-90",
+              activeView === item.id
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            {item.icon}
+            <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all active:scale-90",
+            isChatOpen ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Chat</span>
+        </button>
+      </nav>
       {/* Mobile Sidebar Overlay */}
       {showMobileMenu && (
         <div
@@ -186,14 +219,15 @@ function HomeContent() {
           </div>
           <div className="flex items-center gap-4">
             {currentEnergy !== null && (
-              <div className={cn(
+            <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-700",
                 isLowEnergy
                   ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse"
                   : "bg-primary/10 border-primary/20 text-primary"
               )}>
                 <Activity className="w-3 h-3" />
-                <span>Energy: {currentEnergy}/10</span>
+                <span className="hidden sm:inline">Energy: {currentEnergy}/10</span>
+                <span className="sm:hidden">{currentEnergy}/10</span>
               </div>
             )}
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
@@ -211,7 +245,7 @@ function HomeContent() {
           initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-          className="p-4 md:p-8 max-w-7xl mx-auto"
+          className="p-3 pb-20 md:p-8 md:pb-8 max-w-7xl mx-auto"
         >
           {activeView === "dashboard" && (
             isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />

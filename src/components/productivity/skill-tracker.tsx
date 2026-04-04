@@ -10,7 +10,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle } from "lucide-react";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -40,7 +40,9 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     addChallengeStep,
     updateChallengeStep,
     deleteChallengeStep,
-    deleteRoleTrack
+    deleteRoleTrack,
+    trackDeadlines,
+    setTrackDeadline
   } = useProductivity();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
@@ -185,8 +187,20 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     }
   };
 
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
   return (
     <div className="max-w-4xl w-full space-y-8 pb-12">
+      {/* Today's Date Header */}
+      <div className="flex items-center justify-between px-4 sm:px-0">
+        <div>
+          <h2 className="text-2xl font-black tracking-tighter text-foreground flex items-center gap-2">
+             Skill Track
+          </h2>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em]">{today}</p>
+        </div>
+      </div>
+
       {sortedRoles.length === 0 ? (
         <div className="bg-card rounded-2xl p-12 border border-border text-center shadow-xl">
           <span className="text-6xl block mb-4">💡</span>
@@ -212,9 +226,6 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                     <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
                       <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
                       {role} Track
-                      <div className="ml-2 text-muted-foreground group-hover/track:text-primary transition-colors">
-                        {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                      </div>
                     </h2>
                   </div>
                   <button
@@ -406,14 +417,16 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-border bg-muted/5 px-12 pb-5 pt-2 relative"
+                                  className="overflow-hidden border-t border-border bg-muted/5 px-4 sm:px-12 pb-5 pt-2 relative"
                                 >
                                   {expandingIds.includes(challenge.id) ? (
-                                    <div className="py-8 text-center flex flex-col items-center">
+                                    <div className="py-12 text-center flex flex-col items-center justify-center min-h-[200px]">
                                       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
                                       <p className="text-sm font-bold text-foreground">AI Strategy Loading...</p>
+                                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-2">Personalizing your growth track</p>
                                     </div>
                                   ) : (
+                                    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[200px]">
                                     <>
                                       <div className="flex items-center justify-between mt-4 mb-2">
                                         <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Breakdown</h4>
@@ -515,7 +528,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </div>
 
                                         {addingResourceTo === challenge.id && (
-                                          <form onSubmit={(e) => handleAddResource(challenge, e)} className="flex gap-2 bg-background p-2 rounded-xl border border-primary/20">
+                                          <form onSubmit={(e) => handleAddResource(challenge, e)} className="flex flex-col sm:flex-row gap-2 bg-background p-2 rounded-xl border border-primary/20">
                                             <input
                                               value={newResourceTitle} onChange={e => setNewResourceTitle(e.target.value)}
                                               placeholder="Title (optional)" className="flex-1 bg-transparent px-2 text-sm outline-none border-r border-border"
@@ -556,6 +569,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </div>
                                       </div>
                                     </>
+                                  </motion.div>
                                   )}
                                 </motion.div>
                               )}

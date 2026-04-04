@@ -54,19 +54,20 @@ import { AppOnboarding } from "@/components/ui/app-onboarding";
 const GlobalLoadingOverlay = ({ isProcessingAI }: { isProcessingAI: boolean }) => {
   if (!isProcessingAI) return null;
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md transition-all duration-300">
-      <div className="flex flex-col items-center gap-6 p-12 rounded-[3rem] bg-card border border-primary/20 shadow-2xl scale-110">
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-          <Loader2 className="w-12 h-12 text-primary animate-spin relative z-10" />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black tracking-tighter text-foreground uppercase tracking-widest">
-            AI is Processing...
-          </h2>
-          <p className="text-sm font-medium text-muted-foreground max-w-[200px] leading-relaxed italic">
-            Configuring your workspace for peak performance. Please wait.
-          </p>
+    // Thin transparent overlay — user can see app, controls are disabled via pointer-events-none on content
+    <div className="fixed inset-0 z-[9999] pointer-events-none">
+      {/* Very subtle tint — app remains readable */}
+      <div className="absolute inset-0 bg-background/20" />
+      {/* Glass toast pinned to top-center */}
+      <div className="absolute top-5 left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-card/70 backdrop-blur-xl border border-border/60 shadow-xl shadow-black/10">
+          <div className="relative flex-shrink-0">
+            <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+            <Loader2 className="w-4 h-4 text-primary animate-spin relative z-10" />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/80">
+            AI is working…
+          </span>
         </div>
       </div>
     </div>
@@ -380,14 +381,14 @@ function HomeContent() {
                     "w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all shadow-2xl active:scale-[0.98] outline-none",
                     confirmState.type === "danger" 
                       ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" 
-                      : "bg-primary hover:bg-primary/110 text-primary-foreground shadow-primary/20"
+                      : "bg-foreground hover:bg-foreground/90 text-background shadow-foreground/10"
                   )}
                 >
                   {confirmState.confirmText || "Confirm"}
                 </button>
                 <button
                   onClick={closeConfirm}
-                  className="w-full py-5 bg-muted/50 hover:bg-muted text-muted-foreground rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] outline-none border border-border/50"
+                  className="w-full py-5 bg-slate-100 hover:bg-slate-200 dark:bg-muted/50 dark:hover:bg-muted text-muted-foreground rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] outline-none border border-border/50"
                 >
                   Cancel
                 </button>
@@ -454,7 +455,8 @@ const TamboProviderWithContext = () => {
       tools={augmentedTools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-50 grayscale select-none")}>
+      {/* App dims slightly and loses interactivity while AI works — overlay handles the visual */}
+      <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-60 select-none")}>
         <HomeContent />
       </div>
       <GlobalLoadingOverlay isProcessingAI={isProcessingAI} />

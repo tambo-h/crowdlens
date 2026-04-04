@@ -24,11 +24,11 @@ export const skillTrackerSchema = z.object({
       steps: z.array(
         z.object({
           id: z.string(),
-          title: z.string(),
+          title: z.string().min(1),
           completed: z.boolean(),
           deadline: z.string().optional(),
         })
-      ),
+      ).transform(steps => steps.filter(s => s?.title?.trim().length > 0)),
     })
   ).default([]).describe("List of challenges to track and manage."),
 });
@@ -726,9 +726,10 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </motion.div>
                                       )}
 
-                                      {challenge.steps.length > 0 ? (
+                                      {/* Filter out any steps with empty titles before rendering */}
+                                      {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).length > 0 ? (
                                         <div className="space-y-2">
-                                          {challenge.steps.map((step: any) => (
+                                          {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).map((step: any) => (
                                             <div
                                               key={step.id}
                                               className="flex items-center justify-between text-sm group/step py-1.5 px-3 rounded-lg hover:bg-background/50 transition-colors border border-transparent hover:border-border/50"

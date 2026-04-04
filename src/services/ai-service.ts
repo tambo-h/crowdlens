@@ -4,7 +4,7 @@
  */
 
 const getApiKey = () => process.env.OPENROUTER_API_KEY || "";
-const MODEL = "openrouter/free";
+const MODEL = "google/gemini-2.0-flash-lite-001";
 
 export interface GeneratedData {
     habits: Array<{ name: string, category: string, deadline: string }>;

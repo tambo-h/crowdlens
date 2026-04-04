@@ -23,13 +23,15 @@ export async function expandChallenge(userId: string, challengeId: string): Prom
   const currentDate = new Date().toISOString().split('T')[0];
   const expansion = await generateChallengeDetails(challenge.title, challenge.role, currentDate, challenge.deadline);
 
-  // 2. Map steps to include IDs and deadlines
-  const steps = expansion.steps.map((s, i) => ({
-    id: `s_${Date.now()}_${i}`,
-    title: s.title,
-    completed: false,
-    deadline: s.deadline || undefined
-  }));
+  // 2. Map steps — filter out any with empty/null titles (AI can sometimes return blank entries)
+  const steps = expansion.steps
+    .filter((s: any) => s?.title?.trim().length > 0)
+    .map((s: any, i: number) => ({
+      id: `s_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 4)}`,
+      title: s.title.trim(),
+      completed: false,
+      deadline: s.deadline || undefined
+    }));
 
   // 3. Update the challenge in the list
   const updatedChallenges = challenges.map(c =>
@@ -185,13 +187,17 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
  * Add a new step to a challenge
  */
 export async function addChallengeStep(userId: string, input: { challengeId: string, title: string }): Promise<any> {
+  // Guard: reject empty or whitespace-only titles
+  if (!input.title?.trim()) {
+    return { success: false, error: "Step title cannot be empty." };
+  }
   const keys = getKeys(userId);
   const challenges = await getChallenges(userId);
   const updated = challenges.map(c => {
     if (c.id === input.challengeId) {
       const newStep: ChallengeStep = {
         id: `s_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        title: input.title,
+        title: input.title.trim(),
         completed: false
       };
       return { ...c, steps: [...c.steps, newStep], completed: false };

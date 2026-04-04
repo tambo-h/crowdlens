@@ -279,7 +279,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     }, []);
 
     const expandChallengeDetails = useCallback(async (challengeId: string) => {
-        if (!userId) return;
+        if (!userId || expandingIds.includes(challengeId)) return;
         // Reset cancellation state for this ID
         cancelledExpansions.current.delete(challengeId);
         setExpandingIds(prev => [...prev, challengeId]);

@@ -259,10 +259,10 @@ export function ProductivityDashboard({
         </div>
 
         {/* Daily Wisdom & Weekend Reflection */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           <motion.div
             variants={itemVariants}
-            className="xl:col-span-8 bg-gradient-to-br from-indigo-500/5 via-background to-primary/5 rounded-[2.5rem] p-8 md:p-12 border border-border/50 relative overflow-hidden group shadow-2xl"
+            className="lg:col-span-7 xl:col-span-8 bg-gradient-to-br from-indigo-500/5 via-background to-primary/5 rounded-[2.5rem] p-6 md:p-10 lg:p-12 border border-border/50 relative overflow-hidden group shadow-2xl"
           >
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
               <Sparkles className="w-64 h-64 text-primary" />
@@ -317,9 +317,9 @@ export function ProductivityDashboard({
 
           <motion.div
             variants={itemVariants}
-            className="xl:col-span-4 bg-card/60 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-border shadow-2xl flex flex-col"
+            className="lg:col-span-5 xl:col-span-4 bg-card/60 backdrop-blur-2xl rounded-[2.5rem] p-6 md:p-8 border border-border shadow-2xl flex flex-col"
           >
-            <h3 className="text-xs font-black text-muted-foreground mb-8 flex items-center gap-3 uppercase tracking-[0.3em]">
+            <h3 className="text-[10px] font-black text-muted-foreground mb-6 md:mb-8 flex items-center gap-3 uppercase tracking-[0.3em]">
               <div className="w-2 h-2 rounded-full bg-accent" />
               Skill Momentum
             </h3>
@@ -334,10 +334,10 @@ export function ProductivityDashboard({
                   <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner", metric.color)}>
                     {metric.value.includes('%') ? <TrendingUp className="w-5 h-5" /> : metric.value.charAt(0)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{metric.label}</p>
-                    <p className="text-lg font-bold text-foreground truncate">{metric.value}</p>
-                    <p className="text-[9px] font-medium text-muted-foreground/60 uppercase">{metric.sub}</p>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1.5">{metric.label}</p>
+                    <p className="text-base md:text-lg font-bold text-foreground leading-tight">{metric.value}</p>
+                    <p className="text-[9px] font-medium text-muted-foreground/60 uppercase mt-0.5">{metric.sub}</p>
                   </div>
                 </div>
               ))}

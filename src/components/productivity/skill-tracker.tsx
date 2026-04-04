@@ -277,9 +277,10 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
   const handleAddStep = async (challengeId: string) => {
     if (!newStepTitle.trim() || !addChallengeStep) return;
-    await addChallengeStep(challengeId, newStepTitle.trim());
-    setNewStepTitle("");
+    const title = newStepTitle.trim();
     setAddingStepTo(null);
+    setNewStepTitle("");
+    await addChallengeStep(challengeId, title);
   };
 
   const handleDeleteStep = async (challengeId: string, stepId: string, e: React.MouseEvent) => {

@@ -190,7 +190,7 @@ export async function addChallengeStep(userId: string, input: { challengeId: str
   const updated = challenges.map(c => {
     if (c.id === input.challengeId) {
       const newStep: ChallengeStep = {
-        id: `s_${Date.now()}`,
+        id: `s_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         title: input.title,
         completed: false
       };

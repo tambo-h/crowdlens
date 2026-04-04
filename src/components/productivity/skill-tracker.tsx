@@ -36,6 +36,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     isLoadingChallenges,
     userId,
     expandChallengeDetails,
+    abortExpansion,
     expandingIds,
     addChallengeStep,
     updateChallengeStep,
@@ -551,10 +552,29 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   className="overflow-hidden border-t border-border bg-muted/5 px-4 sm:px-12 pb-5 pt-2 relative"
                                 >
                                   {expandingIds.includes(challenge.id) ? (
-                                    <div className="py-12 text-center flex flex-col items-center justify-center min-h-[200px]">
+                                    <div className="py-12 text-center flex flex-col items-center justify-center min-h-[200px] relative">
+                                      {/* Cancel Button */}
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          abortExpansion(challenge.id);
+                                        }}
+                                        className="absolute top-0 right-0 p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all group/cancel"
+                                        title="Cancel AI request"
+                                      >
+                                        <X className="w-5 h-5 transition-transform group-hover/cancel:rotate-90" />
+                                      </button>
+
                                       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
                                       <p className="text-sm font-bold text-foreground">AI Strategy Loading...</p>
                                       <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-2">Personalizing your growth track</p>
+                                      
+                                      <button 
+                                        onClick={() => abortExpansion(challenge.id)}
+                                        className="mt-6 px-4 py-1.5 rounded-full border border-border text-[10px] font-black uppercase tracking-[0.2em] hover:bg-muted transition-all"
+                                      >
+                                        Cancel Request
+                                      </button>
                                     </div>
                                   ) : (
                                     <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[200px]">

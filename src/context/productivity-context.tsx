@@ -30,6 +30,7 @@ interface ProductivityContextType {
     deleteChallenge?: (id: string) => Promise<void>;
     deleteRoleTrack?: (role: string) => Promise<void>;
     expandChallengeDetails: (challengeId: string) => Promise<void>;
+    abortExpansion: (challengeId: string) => void;
     addChallengeStep: (challengeId: string, title: string) => Promise<void>;
     updateChallengeStep: (challengeId: string, stepId: string, title: string) => Promise<void>;
     deleteChallengeStep: (challengeId: string, stepId: string) => Promise<void>;
@@ -78,6 +79,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [challenges, setChallenges] = useState<Challenge[]>([]);
     const [isLoadingChallenges, setIsLoadingChallenges] = useState(false);
     const [expandingIds, setExpandingIds] = useState<string[]>([]);
+    const cancelledExpansions = React.useRef<Set<string>>(new Set());
     const [trackDeadlines, setTrackDeadlines] = useState<Record<string, string>>({});
 
     // Pomodoro state
@@ -235,11 +237,26 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
     };
 
+    const abortExpansion = useCallback((challengeId: string) => {
+        cancelledExpansions.current.add(challengeId);
+        setExpandingIds(prev => prev.filter(id => id !== challengeId));
+    }, []);
+
     const expandChallengeDetails = useCallback(async (challengeId: string) => {
         if (!userId) return;
+        // Reset cancellation state for this ID
+        cancelledExpansions.current.delete(challengeId);
         setExpandingIds(prev => [...prev, challengeId]);
         try {
             await expandChallengeService(userId, challengeId);
+            
+            // Check if user cancelled while we were waiting
+            if (cancelledExpansions.current.has(challengeId)) {
+                cancelledExpansions.current.delete(challengeId);
+                console.log(`Expansion for ${challengeId} was cancelled, ignoring results.`);
+                return;
+            }
+
             await refreshChallenges(true);
             triggerCreativeRefresh(); // Refresh links as well
         } catch (err) {
@@ -328,7 +345,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
     return (
         <ProductivityContext.Provider value={{
-            challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails,
+            challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails, abortExpansion,
             saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge,
             deleteRoleTrack: handleDeleteRoleTrack,
             addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,

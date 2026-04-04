@@ -201,7 +201,9 @@ function HomeContent() {
       </aside>
 
       {/* Main Content */}
-      <main className={cn(
+      <main 
+        id="main-scroll-container"
+        className={cn(
         "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
         isChatOpen ? "xl:mr-[400px]" : "mr-0"
       )}>

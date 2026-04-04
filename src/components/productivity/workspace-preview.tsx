@@ -3,7 +3,7 @@
 import React from "react";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { CheckCircle2, Link as LinkIcon, BookOpen, Sparkles, Check } from "lucide-react";
+import { CheckCircle2, Link as LinkIcon, BookOpen, Sparkles, Check, Calendar } from "lucide-react";
 import { withInteractable, useTamboThreadInput } from "@tambo-ai/react";
 import { cn } from "@/lib/utils";
 import { useProductivity } from "@/context/productivity-context";
@@ -12,28 +12,40 @@ export const workspacePreviewSchema = z.object({
     role: z.string(),
     habits: z.array(z.object({
         name: z.string(),
-        category: z.string().optional()
+        category: z.string().optional(),
+        deadline: z.string().optional()
     })),
     links: z.array(z.object({
         title: z.string(),
         url: z.string()
     })),
-    rules: z.array(z.string()).optional()
+    rules: z.array(z.string()).optional(),
+    trackDeadline: z.string().optional()
 });
 
 export type WorkspacePreviewProps = z.infer<typeof workspacePreviewSchema>;
 
-export function WorkspacePreview({ role, habits = [], links = [], rules = [] }: WorkspacePreviewProps) {
+export function WorkspacePreview({ role, habits = [], links = [], rules = [], trackDeadline }: WorkspacePreviewProps) {
     return (
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl max-w-sm w-full animate-in fade-in zoom-in-95 duration-300">
-            <div className="bg-primary/5 p-4 border-b border-border flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                    <Sparkles className="w-5 h-5" />
+            <div className="bg-primary/5 p-4 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-foreground">{role} Setup</h3>
+                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Preview</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="font-bold text-foreground">{role} Setup</h3>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Preview</p>
-                </div>
+                {trackDeadline && (
+                    <div className="flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
+                        <Calendar className="w-3 h-3 text-primary" />
+                        <span className="text-[10px] font-bold text-primary">
+                            {new Date(trackDeadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                    </div>
+                )}
             </div>
 
             <div className="p-4 space-y-6">

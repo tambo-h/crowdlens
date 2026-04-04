@@ -20,13 +20,15 @@ export async function expandChallenge(userId: string, challengeId: string): Prom
   if (!challenge) throw new Error("Challenge not found");
 
   // 1. Generate details via AI
-  const expansion = await generateChallengeDetails(challenge.title, challenge.role);
+  const currentDate = new Date().toISOString().split('T')[0];
+  const expansion = await generateChallengeDetails(challenge.title, challenge.role, currentDate, challenge.deadline);
 
-  // 2. Map steps to include IDs
+  // 2. Map steps to include IDs and deadlines
   const steps = expansion.steps.map((s, i) => ({
     id: `s_${Date.now()}_${i}`,
     title: s.title,
-    completed: false
+    completed: false,
+    deadline: s.deadline || undefined
   }));
 
   // 3. Update the challenge in the list
@@ -101,6 +103,7 @@ export interface ChallengeStep {
   id: string;
   title: string;
   completed: boolean;
+  deadline?: string;
 }
 
 export interface Challenge {
@@ -576,18 +579,20 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
       const generated = await generatePersonalizedData(
         actualInput.skill,
         actualInput.experienceLevel,
-        actualInput.projectType
+        actualInput.projectType,
+        new Date().toISOString().split('T')[0]
       );
 
       // Store draft in Redis temporarily (expiring in 30 minutes)
       await redis.set(keys.setup_draft, generated, { ex: 1800 });
       console.log("[Productivity-Service] Draft stored in Redis for user:", actualUserId);
 
-      const habitList = (generated.habits || []).map(h => `- **${h.name}**`).slice(0, 5).join("\n");
+      const habitList = (generated.habits || []).map(h => `- **${h.name}**${h.deadline ? ` _(by ${h.deadline})_` : ''}`).slice(0, 5).join("\n");
       const linkList = (generated.links || []).map(l => `- [${l.title}](${l.url})`).slice(0, 3).join("\n");
+      const trackDeadlineMsg = generated.trackDeadline ? `\n\n📅 **Track Deadline**: ${generated.trackDeadline}` : '';
 
       return {
-        message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?\n\n> 💡 **Action Required**: Respond with **"apply"** or click the **"Apply Setup Now"** button above to finalize your workspace.`,
+        message: `I've prepared a personalized setup for a ${actualInput.experienceLevel || ""} ${actualInput.skill}${actualInput.projectType ? ` building a ${actualInput.projectType}` : ""}.${trackDeadlineMsg}\n\n### Preview:\n${habitList}\n${(generated.habits?.length || 0) > 5 ? `*+ ${generated.habits.length - 5} more challenges*\n` : ""}\n\n### Resources:\n${linkList}\n\nShould I apply these to your workspace?\n\n> 💡 **Action Required**: Respond with **"apply"** or click the **"Apply Setup Now"** button above to finalize your workspace.`,
         suggestions: ["apply"],
         interactive: {
           name: "WorkspacePreview",
@@ -595,7 +600,8 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
             role: actualInput.skill,
             habits: generated.habits || [],
             links: generated.links || [],
-            rules: generated.rules || []
+            rules: generated.rules || [],
+            trackDeadline: generated.trackDeadline || undefined
           }
         },
         render: {
@@ -604,7 +610,8 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
             role: actualInput.skill,
             habits: generated.habits || [],
             links: generated.links || [],
-            rules: generated.rules || []
+            rules: generated.rules || [],
+            trackDeadline: generated.trackDeadline || undefined
           }
         },
         component: {
@@ -613,7 +620,8 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
             role: actualInput.skill,
             habits: generated.habits || [],
             links: generated.links || [],
-            rules: generated.rules || []
+            rules: generated.rules || [],
+            trackDeadline: generated.trackDeadline || undefined
           }
         }
       };
@@ -648,9 +656,18 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     steps: [],
     resources: [],
     role: actualInput.skill,
-    order: i
+    order: i,
+    deadline: h.deadline || undefined
   })));
   await batchSaveLinks(actualUserId, links);
+
+  // Save track-level deadline if provided
+  if (draft.trackDeadline) {
+    const trackDeadlineKeys = getKeys(actualUserId);
+    const deadlines = await redis.get<Record<string, string>>(trackDeadlineKeys.track_deadline) || {};
+    deadlines[actualInput.skill] = draft.trackDeadline;
+    await redis.set(trackDeadlineKeys.track_deadline, deadlines);
+  }
 
   // Cleanup
   await redis.del(keys.setup_draft);

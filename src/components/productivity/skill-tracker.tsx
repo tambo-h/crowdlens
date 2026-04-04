@@ -6,7 +6,7 @@
 "use client";
 
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
@@ -49,6 +49,63 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const [newTitle, setNewTitle] = useState("");
   const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
 
+  // Persistent expansion state
+  useEffect(() => {
+    const saved = sessionStorage.getItem("taskstack_expanded_id");
+    if (saved) setExpandedId(saved);
+  }, []);
+
+  const handleSetExpandedId = (id: string | null) => {
+    // If expanding, save the scroll position before setting expandedId
+    if (id) {
+      const container = document.getElementById("main-scroll-container");
+      if (container) {
+        sessionStorage.setItem("taskstack_scroll_top", container.scrollTop.toString());
+      }
+      sessionStorage.setItem("taskstack_expanded_id", id);
+    } else {
+      sessionStorage.removeItem("taskstack_expanded_id");
+      sessionStorage.removeItem("taskstack_scroll_top");
+    }
+    setExpandedId(id);
+  };
+
+  // Scroll into view when AI expansion finishes OR component re-mounts
+  useEffect(() => {
+    // 1. Initial mount or re-mount (e.g. data refresh)
+    const savedId = sessionStorage.getItem("taskstack_expanded_id");
+    const savedScroll = sessionStorage.getItem("taskstack_scroll_top");
+    
+    if (savedId) {
+      // Use small delays to wait for layout shifts to complete
+      setTimeout(() => {
+        const container = document.getElementById("main-scroll-container");
+        const el = document.querySelector(`[data-task-id="${savedId}"]`);
+        
+        if (container && savedScroll) {
+          // Precise restoration of pixel position
+          container.scrollTop = parseInt(savedScroll, 10);
+        } else if (el) {
+          // Fallback to scrolling task into view if pixel position is not available
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    }
+  }, [challenges]); // Re-run when data refreshes
+
+  // Scroll specifically when expansion state changes
+  useEffect(() => {
+    // If we were expanding and now we've finished
+    if (expandedId && !expandingIds.includes(expandedId)) {
+      const el = document.querySelector(`[data-task-id="${expandedId}"]`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    }
+  }, [expandingIds, expandedId]);
+
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [editingChallengeTitle, setEditingChallengeTitle] = useState("");
 
@@ -66,12 +123,44 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
   // Initialize collapsed states once when challenges load
   useState(() => {
+    const savedExpandedId = sessionStorage.getItem("taskstack_expanded_id");
+    const expandedChallenge = challenges.find(c => c.id === savedExpandedId);
+    const expandedRole = expandedChallenge?.role || "General";
+
     const roles = Array.from(new Set(challenges.map(c => c.role || "General")));
     if (roles.length > 1) {
-      // Keep only the first one expanded
-      setCollapsedRoles(roles.slice(1));
+      // Keep only the first one expanded, UNLESS another one contains the expanded task
+      setCollapsedRoles(roles.filter(r => r !== roles[0] && r !== expandedRole));
     }
   });
+
+  // Ensure expanded task's role is never collapsed
+  useEffect(() => {
+    if (expandedId) {
+      const challenge = challenges.find(c => c.id === expandedId);
+      const role = challenge?.role || "General";
+      if (collapsedRoles.includes(role)) {
+        setCollapsedRoles(prev => prev.filter(r => r !== role));
+      }
+    }
+  }, [expandedId, challenges]);
+
+  // Deadline status helper
+  const getDeadlineStatus = (deadline?: string) => {
+    if (!deadline) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const dl = new Date(deadline + 'T00:00:00');
+    const diffDays = Math.ceil((dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-red-500 bg-red-500/10 border-red-500/20', icon: '🔴' };
+    if (diffDays <= 2) return { label: diffDays === 0 ? 'Due today' : `${diffDays}d left`, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: '🟡' };
+    return { label: `${diffDays}d left`, color: 'text-muted-foreground bg-muted/50 border-border', icon: '🟢' };
+  };
+
+  const formatDeadlineDate = (deadline?: string) => {
+    if (!deadline) return '';
+    return new Date(deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const toggleCollapse = (role: string) => {
     setCollapsedRoles(prev =>
@@ -81,7 +170,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
   const handleExpand = (challenge: any) => {
     const isExpanding = expandedId !== challenge.id;
-    setExpandedId(isExpanding ? challenge.id : null);
+    handleSetExpandedId(isExpanding ? challenge.id : null);
 
     if (isExpanding && challenge.steps.length === 0 && (!challenge.resources || challenge.resources.length === 0)) {
       expandChallengeDetails(challenge.id);
@@ -227,6 +316,22 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                       <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
                       {role} Track
                     </h2>
+                    {trackDeadlines[role] && (
+                      <div className="flex items-center gap-2 ml-4">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Target: {formatDeadlineDate(trackDeadlines[role])}
+                        </span>
+                        {(() => {
+                          const status = getDeadlineStatus(trackDeadlines[role]);
+                          return status ? (
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${status.color}`}>
+                              {status.label}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={(e) => {
@@ -297,8 +402,14 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                         {roleChallenges.map((challenge) => (
                           <div
                             key={challenge.id}
-                            className={`group border rounded-xl transition-all duration-300 relative ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background/80 border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 backdrop-blur-sm"
-                              }`}
+                            data-task-id={challenge.id}
+                            className={`group border rounded-xl transition-all duration-300 relative ${
+                                challenge.completed 
+                                  ? "bg-muted/10 border-border opacity-70" 
+                                  : expandedId === challenge.id
+                                    ? "bg-background border-primary/50 shadow-xl shadow-primary/5 ring-1 ring-primary/20"
+                                    : "bg-background/80 border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 backdrop-blur-sm"
+                               }`}
                           >
                             <div className="p-4 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-4 flex-1">
@@ -383,7 +494,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   </AnimatePresence>
 
                                   {challenge.steps.length > 0 && editingChallengeId !== challenge.id && (
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                       <div className="flex -space-x-1">
                                         {challenge.steps.slice(0, 3).map((_step: any, i: number) => (
                                           <div key={i} className={`w-1.5 h-1.5 rounded-full border border-background ${challenge.steps[i].completed ? "bg-primary" : "bg-muted-foreground/30"}`} />
@@ -392,8 +503,28 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                         {challenge.steps.filter((s: any) => s.completed).length}/{challenge.steps.length} Steps
                                       </span>
+                                      {challenge.deadline && !challenge.completed && (() => {
+                                        const status = getDeadlineStatus(challenge.deadline);
+                                        return status ? (
+                                          <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${status.color}`}>
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                          </span>
+                                        ) : null;
+                                      })()}
                                     </div>
                                   )}
+                                  {challenge.deadline && challenge.steps.length === 0 && editingChallengeId !== challenge.id && !challenge.completed && (() => {
+                                    const status = getDeadlineStatus(challenge.deadline);
+                                    return status ? (
+                                      <div className="mt-1">
+                                        <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 w-fit ${status.color}`}>
+                                          <Clock className="w-2.5 h-2.5" />
+                                          {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                        </span>
+                                      </div>
+                                    ) : null;
+                                  })()}
                                   {expandingIds.includes(challenge.id) && (
                                     <div className="flex items-center gap-2 mt-2">
                                       <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
@@ -490,9 +621,19 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                                     <button onClick={() => setEditingStepId(null)} className="p-1 hover:bg-muted text-red-500 rounded"><X className="w-4 h-4" /></button>
                                                   </div>
                                                 ) : (
-                                                  <span className={`font-medium text-[13px] transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
-                                                    {step.title}
-                                                  </span>
+                                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    <span className={`font-medium text-[13px] transition-all flex-shrink ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
+                                                      {step.title}
+                                                    </span>
+                                                    {step.deadline && !step.completed && (() => {
+                                                      const status = getDeadlineStatus(step.deadline);
+                                                      return status ? (
+                                                        <span className={`text-[8px] font-black uppercase tracking-wider px-1 py-0.5 rounded border flex-shrink-0 ${status.color}`}>
+                                                          {formatDeadlineDate(step.deadline)}
+                                                        </span>
+                                                      ) : null;
+                                                    })()}
+                                                  </div>
                                                 )}
                                               </div>
 

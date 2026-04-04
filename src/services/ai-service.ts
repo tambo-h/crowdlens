@@ -7,35 +7,42 @@ const getApiKey = () => process.env.OPENROUTER_API_KEY || "";
 const MODEL = "openrouter/free";
 
 export interface GeneratedData {
-    habits: Array<{ name: string, category: string }>;
+    habits: Array<{ name: string, category: string, deadline: string }>;
     links: Array<{ title: string, url: string, tags: string[] }>;
     rules: string[];
+    trackDeadline: string;
 }
 
 export interface ChallengeExpansion {
-    steps: { title: string }[];
+    steps: { title: string, deadline: string }[];
     resources: { title: string, url: string, tags: string[] }[];
 }
 
-export async function generatePersonalizedData(skill: string, experienceLevel?: string, projectType?: string): Promise<GeneratedData> {
+export async function generatePersonalizedData(skill: string, experienceLevel?: string, projectType?: string, currentDate?: string): Promise<GeneratedData> {
     const apiKey = getApiKey();
     if (!apiKey) {
         throw new Error("OPENROUTER_API_KEY is not configured. Please add it to your environment variables.");
     }
 
-    const prompt = `You are an expert mentor. For a ${experienceLevel || "standard"} ${skill}${projectType ? ` building a ${projectType}` : ""}, provide:
-1. 10 specific, hands-on "Skill Challenges" tailored to this level and project type.
+    const dateStr = currentDate || new Date().toISOString().split('T')[0];
+
+    const prompt = `You are an expert mentor and project planner. Today's date is ${dateStr}.
+
+For a ${experienceLevel || "standard"} ${skill}${projectType ? ` building a ${projectType}` : ""}, provide:
+1. 10 specific, hands-on "Skill Challenges" tailored to this level and project type, each with a realistic deadline date (YYYY-MM-DD format) spread across a reasonable learning timeline starting from today.
 2. 5 high-quality learning resources (links).
 3. 3 "Slow Productivity" rules for this specific context.
+4. An overall "trackDeadline" (YYYY-MM-DD) for when the entire skill track should be completed.
 
 Respond ONLY with a JSON object in this format:
 {
-  "habits": [ { "name": "Challenge Title", "category": "Core" }, ... ],
-  "links": [...],
-  "rules": [...]
+  "habits": [ { "name": "Challenge Title", "category": "Core", "deadline": "YYYY-MM-DD" }, ... ],
+  "links": [ { "title": "Resource Title", "url": "https://...", "tags": ["learning"] }, ... ],
+  "rules": [ "Rule 1", ... ],
+  "trackDeadline": "YYYY-MM-DD"
 }
 
-Make the challenges specific and practical.`;
+Make the challenges specific and practical. Space deadlines realistically (don't cram everything into one week). Earlier challenges should have earlier deadlines.`;
 
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -77,19 +84,26 @@ Make the challenges specific and practical.`;
     }
 }
 
-export async function generateChallengeDetails(challengeTitle: string, role: string): Promise<ChallengeExpansion> {
+export async function generateChallengeDetails(challengeTitle: string, role: string, currentDate?: string, challengeDeadline?: string): Promise<ChallengeExpansion> {
     const apiKey = getApiKey();
     if (!apiKey) {
         throw new Error("OPENROUTER_API_KEY is not configured for challenge details.");
     }
 
+    const dateStr = currentDate || new Date().toISOString().split('T')[0];
+    const deadlineContext = challengeDeadline
+        ? `The challenge deadline is ${challengeDeadline}. Space the step deadlines between today (${dateStr}) and the challenge deadline.`
+        : `Today is ${dateStr}. Assign realistic deadlines to each step, spread across the next 1-2 weeks.`;
+
     const prompt = `For the challenge "${challengeTitle}" in the context of being a ${role}, provide:
-1. 3-5 clear, actionable steps to complete it.
+1. 3-5 clear, actionable steps to complete it, each with a deadline date (YYYY-MM-DD format).
 2. 2-3 high-quality direct resource links (URL and title).
+
+${deadlineContext}
 
 Respond ONLY with a JSON object:
 {
-  "steps": [ { "title": "Step 1 description" }, ... ],
+  "steps": [ { "title": "Step 1 description", "deadline": "YYYY-MM-DD" }, ... ],
   "resources": [ { "title": "Resource Title", "url": "https://...", "tags": ["learning"] }, ... ]
 }`;
 

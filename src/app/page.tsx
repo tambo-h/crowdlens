@@ -34,7 +34,8 @@ import {
   Menu,
   XIcon,
   Moon,
-  Sun
+  Sun,
+  Loader2
 } from "lucide-react";
 
 // Creative tool imports
@@ -46,10 +47,35 @@ import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-re
 
 import { Onboarding } from "@/components/auth/onboarding";
 import { ProfileMenu } from "@/components/auth/profile-menu";
+import { QuickSearch } from "@/components/productivity/quick-search";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
+import { AppOnboarding } from "@/components/ui/app-onboarding";
+
+const GlobalLoadingOverlay = ({ isProcessingAI }: { isProcessingAI: boolean }) => {
+  if (!isProcessingAI) return null;
+  return (
+    // Thin transparent overlay — user can see app, controls are disabled via pointer-events-none on content
+    <div className="fixed inset-0 z-[9999] pointer-events-none">
+      {/* Very subtle tint — app remains readable */}
+      <div className="absolute inset-0 bg-background/20" />
+      {/* Glass toast pinned to top-center */}
+      <div className="absolute top-5 left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-card/70 backdrop-blur-xl border border-border/60 shadow-xl shadow-black/10">
+          <div className="relative flex-shrink-0">
+            <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+            <Loader2 className="w-4 h-4 text-primary animate-spin relative z-10" />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/80">
+            AI is working…
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm, lastSetupRole, setLastSetupRole } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   const [isDarkPref, setIsDarkPref] = React.useState(false);
@@ -65,6 +91,28 @@ function HomeContent() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
+
+  // Seamless redirect + scroll to newly created skill track
+  React.useEffect(() => {
+    if (!lastSetupRole) return;
+    // Navigate to Skills Track page
+    setActiveView('skills');
+    // After navigation, scroll to the newly added track (at the bottom of the page)
+    const scrollTimeout = setTimeout(() => {
+      // Find the last role track header (newest = last in DOM after sort)
+      const allTrackHeaders = document.querySelectorAll('[data-role-track]');
+      const lastTrack = allTrackHeaders[allTrackHeaders.length - 1];
+      if (lastTrack) {
+        lastTrack.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // Fallback: scroll to bottom of skills container
+        const mainEl = document.getElementById('main-scroll');
+        if (mainEl) mainEl.scrollTo({ top: mainEl.scrollHeight, behavior: 'smooth' });
+      }
+      setLastSetupRole(null);
+    }, 600);
+    return () => clearTimeout(scrollTimeout);
+  }, [lastSetupRole, setActiveView, setLastSetupRole]);
 
   // Auto-open chat for new users to guide onboarding
   React.useEffect(() => {
@@ -97,6 +145,39 @@ function HomeContent() {
       "flex h-screen overflow-hidden transition-colors duration-1000 relative",
       isLowEnergy ? "bg-black" : "bg-background"
     )}>
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border flex items-center justify-around h-16 px-2 safe-area-bottom">
+        {[
+          { id: "dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Home" },
+          { id: "pomodoro", icon: <Timer className="w-5 h-5" />, label: "Focus" },
+          { id: "skills", icon: <CheckSquare className="w-5 h-5" />, label: "Skills" },
+          { id: "links", icon: <LinkIcon className="w-5 h-5" />, label: "Links" },
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => setActiveView(item.id)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all active:scale-90",
+              activeView === item.id
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            {item.icon}
+            <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all active:scale-90",
+            isChatOpen ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Chat</span>
+        </button>
+      </nav>
       {/* Mobile Sidebar Overlay */}
       {showMobileMenu && (
         <div
@@ -161,21 +242,16 @@ function HomeContent() {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-
           <ApiKeyCheck>
-            <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Tambo AI</span>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">Ready to boost your productivity</p>
-            </div>
+            <></>
           </ApiKeyCheck>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className={cn(
+      <main 
+        id="main-scroll"
+        className={cn(
         "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
         isChatOpen ? "xl:mr-[400px]" : "mr-0"
       )}>
@@ -187,20 +263,26 @@ function HomeContent() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground hidden lg:block">
               {navItems.find(i => i.id === activeView)?.label || "Dashboard"}
             </h2>
           </div>
+
+          <div className="flex-1 flex justify-center max-w-xl px-4">
+            <QuickSearch />
+          </div>
+
           <div className="flex items-center gap-4">
             {currentEnergy !== null && (
-              <div className={cn(
+            <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-700",
                 isLowEnergy
                   ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse"
                   : "bg-primary/10 border-primary/20 text-primary"
               )}>
                 <Activity className="w-3 h-3" />
-                <span>Energy: {currentEnergy}/10</span>
+                <span className="hidden sm:inline">Energy: {currentEnergy}/10</span>
+                <span className="sm:hidden">{currentEnergy}/10</span>
               </div>
             )}
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
@@ -218,7 +300,7 @@ function HomeContent() {
           initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-          className="p-4 md:p-8 max-w-7xl mx-auto"
+          className="p-3 pb-20 md:p-8 md:pb-8 max-w-7xl mx-auto"
         >
           {activeView === "dashboard" && (
             isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />
@@ -260,13 +342,71 @@ function HomeContent() {
 
       {/* Chat Side Panel */}
       <ChatSidePanel />
+
+      {/* Global Confirmation Modal */}
+      <AnimatePresence>
+        {confirmState.isOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 isolate">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeConfirm}
+              className="absolute inset-0 bg-background/80 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-card border border-border/80 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] rounded-[3rem] p-8 text-center"
+            >
+              <div className={cn(
+                "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner",
+                confirmState.type === "danger" ? "bg-red-500/10 text-red-500" : "bg-primary/10 text-primary"
+              )}>
+                <AlertOctagon className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-black text-foreground mb-3 tracking-tight">{confirmState.title}</h3>
+              <div className="text-sm font-medium text-muted-foreground mb-10 leading-relaxed px-2">
+                {confirmState.message}
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    await confirmState.onConfirm();
+                    closeConfirm();
+                  }}
+                  className={cn(
+                    "w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all shadow-2xl active:scale-[0.98] outline-none",
+                    confirmState.type === "danger" 
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" 
+                      : "bg-foreground hover:bg-foreground/90 text-background shadow-foreground/10"
+                  )}
+                >
+                  {confirmState.confirmText || "Confirm"}
+                </button>
+                <button
+                  onClick={closeConfirm}
+                  className="w-full py-5 bg-slate-100 hover:bg-slate-200 dark:bg-muted/50 dark:hover:bg-muted text-muted-foreground rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all active:scale-[0.98] outline-none border border-border/50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* First-time Tutorial Onboarding */}
+      <AppOnboarding />
     </div>
   );
 }
 
 
 const TamboProviderWithContext = () => {
-  const { triggerCreativeRefresh, userId } = useProductivity();
+  const { triggerCreativeRefresh, userId, isProcessingAI, setIsProcessingAI, setLastSetupRole } = useProductivity();
 
   const augmentedTools = React.useMemo(() => tools.map(t => {
     // All tools that take (userId, input) should be wrapped
@@ -289,9 +429,19 @@ const TamboProviderWithContext = () => {
             return { error: "Please log in first." };
           }
           // Inject userId as first argument
-          const res = await (t.tool as any)(userId, ...args);
-          triggerCreativeRefresh();
-          return res;
+          setIsProcessingAI(true);
+          try {
+            const res = await (t.tool as any)(userId, ...args);
+            triggerCreativeRefresh();
+            // After workspace setup, trigger seamless redirect to skill track
+            if (t.name === 'setupPersonalizedWorkspace' && res?.success) {
+              const skill = args[0]?.skill || args[0];
+              if (skill) setLastSetupRole(typeof skill === 'string' ? skill : skill.skill || '');
+            }
+            return res;
+          } finally {
+            setIsProcessingAI(false);
+          }
         }
       };
     }
@@ -305,7 +455,11 @@ const TamboProviderWithContext = () => {
       tools={augmentedTools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      <HomeContent />
+      {/* App dims slightly and loses interactivity while AI works — overlay handles the visual */}
+      <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-60 select-none")}>
+        <HomeContent />
+      </div>
+      <GlobalLoadingOverlay isProcessingAI={isProcessingAI} />
     </TamboProvider>
   );
 };

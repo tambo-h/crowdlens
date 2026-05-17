@@ -275,11 +275,18 @@ export const tools: TamboTool[] = [
   },
   {
     name: "setupPersonalizedWorkspace",
-    description: "Generates and saves a personalized workspace (habits and links) based on user skill/role.",
+    description: `Generates and applies a personalized workspace track immediately. 
+CRITICAL RULES:
+1. Call this tool IMMEDIATELY when the user mentions any skill, goal, language, or workspace topic.
+2. NEVER ask follow-up questions before calling this tool. Just infer what you need.
+3. If experienceLevel is not stated, use 'beginner'. If projectType is unclear, leave it empty.
+4. A user saying 'setup workspace for X' or 'learn X' or 'I want to do X' is enough to call this tool.`,
     tool: setupPersonalizedWorkspace as any,
     inputSchema: z.object({
       userId: z.string().optional(),
-      skill: z.string().describe("The user's role or skill, e.g. 'Next.js Developer'"),
+      skill: z.string().describe("The user's role or skill, e.g. 'Spanish' or 'Next.js Developer'"),
+      experienceLevel: z.string().optional().describe("beginner/intermediate/advanced — infer from context, default to 'beginner'"),
+      projectType: z.string().optional().describe("optional goal context inferred from the message"),
       confirm: z.boolean().optional(),
       data: z.any().optional()
     }),

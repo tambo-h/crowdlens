@@ -6,11 +6,13 @@
 "use client";
 
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
+import { ContextHelp } from "@/components/ui/context-help";
+import { cn } from "@/lib/utils";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -19,7 +21,14 @@ export const skillTrackerSchema = z.object({
       title: z.string(),
       completed: z.boolean(),
       role: z.string(),
-      steps: z.array(z.object({ id: z.string(), title: z.string(), completed: z.boolean() })),
+      steps: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string().min(1),
+          completed: z.boolean(),
+          deadline: z.string().optional(),
+        })
+      ).transform(steps => steps.filter(s => s?.title?.trim().length > 0)),
     })
   ).default([]).describe("List of challenges to track and manage."),
 });
@@ -36,16 +45,80 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     isLoadingChallenges,
     userId,
     expandChallengeDetails,
+    abortExpansion,
     expandingIds,
     addChallengeStep,
     updateChallengeStep,
     deleteChallengeStep,
-    deleteRoleTrack
+    deleteRoleTrack,
+    trackDeadlines,
+    setTrackDeadline,
+    expandedId,
+    setExpandedId,
+    collapsedRoles,
+    setCollapsedRoles,
+    openConfirm,
+    closeConfirm
   } = useProductivity();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
+
+  // Persistent expansion state
+  useEffect(() => {
+    const saved = sessionStorage.getItem("taskstack_expanded_id");
+    if (saved) setExpandedId(saved);
+  }, []);
+
+  const handleSetExpandedId = (id: string | null) => {
+    // If expanding, save the scroll position before setting expandedId
+    if (id) {
+      const container = document.getElementById("main-scroll-container");
+      if (container) {
+        sessionStorage.setItem("taskstack_scroll_top", container.scrollTop.toString());
+      }
+      sessionStorage.setItem("taskstack_expanded_id", id);
+    } else {
+      sessionStorage.removeItem("taskstack_expanded_id");
+      sessionStorage.removeItem("taskstack_scroll_top");
+    }
+    setExpandedId(id);
+  };
+
+  // Scroll into view when AI expansion finishes OR component re-mounts
+  useEffect(() => {
+    // 1. Initial mount or re-mount (e.g. data refresh)
+    const savedId = sessionStorage.getItem("taskstack_expanded_id");
+    const savedScroll = sessionStorage.getItem("taskstack_scroll_top");
+    
+    if (savedId) {
+      // Use small delays to wait for layout shifts to complete
+      setTimeout(() => {
+        const container = document.getElementById("main-scroll-container");
+        const el = document.querySelector(`[data-task-id="${savedId}"]`);
+        
+        if (container && savedScroll) {
+          // Precise restoration of pixel position
+          container.scrollTop = parseInt(savedScroll, 10);
+        } else if (el) {
+          // Fallback to scrolling task into view if pixel position is not available
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    }
+  }, [challenges]); // Re-run when data refreshes
+
+  // Scroll specifically when expansion state changes
+  useEffect(() => {
+    // If we were expanding and now we've finished
+    if (expandedId && !expandingIds.includes(expandedId)) {
+      const el = document.querySelector(`[data-task-id="${expandedId}"]`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    }
+  }, [expandingIds, expandedId]);
 
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [editingChallengeTitle, setEditingChallengeTitle] = useState("");
@@ -61,15 +134,56 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const [newStepTitle, setNewStepTitle] = useState("");
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const didInitRef = useRef(false);
+
+  const [editingDeadlineId, setEditingDeadlineId] = useState<string | null>(null);
+  const [tempDeadline, setTempDeadline] = useState("");
+  const [editingStepDeadlineId, setEditingStepDeadlineId] = useState<string | null>(null);
+  const [stepTempDeadline, setStepTempDeadline] = useState("");
 
   // Initialize collapsed states once when challenges load
-  useState(() => {
+  useEffect(() => {
+    if (didInitRef.current || challenges.length === 0) return;
+    
+    const savedExpandedId = sessionStorage.getItem("taskstack_expanded_id");
+    const expandedChallenge = challenges.find(c => c.id === savedExpandedId);
+    const expandedRole = expandedChallenge?.role || "General";
+
     const roles = Array.from(new Set(challenges.map(c => c.role || "General")));
     if (roles.length > 1) {
-      // Keep only the first one expanded
-      setCollapsedRoles(roles.slice(1));
+      // Keep only the first one expanded, UNLESS another one contains the expanded task
+      setCollapsedRoles(roles.filter(r => r !== roles[0] && r !== expandedRole));
     }
-  });
+    didInitRef.current = true;
+  }, [challenges, setCollapsedRoles]);
+
+  // Ensure expanded task's role is never collapsed
+  useEffect(() => {
+    if (expandedId) {
+      const challenge = challenges.find(c => c.id === expandedId);
+      const role = challenge?.role || "General";
+      if (collapsedRoles.includes(role)) {
+        setCollapsedRoles(prev => prev.filter(r => r !== role));
+      }
+    }
+  }, [expandedId, challenges]);
+
+  // Deadline status helper
+  const getDeadlineStatus = (deadline?: string) => {
+    if (!deadline) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const dl = new Date(deadline + 'T00:00:00');
+    const diffDays = Math.ceil((dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, color: 'text-rose-500 bg-rose-500/10 border-rose-500/30 font-black shadow-[0_2px_10px_-2px_rgba(244,63,94,0.2)]', icon: '🔴' };
+    if (diffDays <= 2) return { label: diffDays === 0 ? 'Due today' : `${diffDays}d left`, color: 'text-orange-500 bg-orange-500/10 border-orange-500/30 font-black shadow-[0_2px_10px_-2px_rgba(249,115,22,0.2)]', icon: '🟡' };
+    return { label: `${diffDays}d left`, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30 font-black shadow-[0_2px_10px_-2px_rgba(16,185,129,0.1)]', icon: '🟢' };
+  };
+
+  const formatDeadlineDate = (deadline?: string) => {
+    if (!deadline) return '';
+    return new Date(deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const toggleCollapse = (role: string) => {
     setCollapsedRoles(prev =>
@@ -77,9 +191,15 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     );
   };
 
+  const saveDeadline = async (id: string, deadline: string) => {
+    if (!updateChallenge) return;
+    await updateChallenge(id, { deadline });
+    setEditingDeadlineId(null);
+  };
+
   const handleExpand = (challenge: any) => {
     const isExpanding = expandedId !== challenge.id;
-    setExpandedId(isExpanding ? challenge.id : null);
+    handleSetExpandedId(isExpanding ? challenge.id : null);
 
     if (isExpanding && challenge.steps.length === 0 && (!challenge.resources || challenge.resources.length === 0)) {
       expandChallengeDetails(challenge.id);
@@ -103,7 +223,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     return acc;
   }, {});
 
-  const sortedRoles = Object.keys(groups).sort();
+  // Sort roles by the minimum challenge order — oldest track first, newest at bottom
+  const sortedRoles = Object.keys(groups).sort((a, b) => {
+    const minA = Math.min(...groups[a].map((c: any) => c.order));
+    const minB = Math.min(...groups[b].map((c: any) => c.order));
+    return minA - minB;
+  });
 
   const handleAdd = async (role: string) => {
     if (!newTitle.trim() || !userId) return;
@@ -123,9 +248,14 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
   const handleDeleteMainTask = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Delete this main task?")) {
-      if (deleteChallenge) await deleteChallenge(id);
-    }
+    openConfirm({
+      title: "Delete Challenge?",
+      message: "This will permanently remove this challenge and all its action steps.",
+      confirmText: "Delete Task",
+      onConfirm: async () => {
+        if (deleteChallenge) await deleteChallenge(id);
+      }
+    });
   };
 
   const handleStartEditMainTask = (challenge: any, e: React.MouseEvent) => {
@@ -145,16 +275,17 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const handleSaveStep = async (challenge: any, stepId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (editingStepTitle.trim() && updateChallengeStep) {
-      await updateChallengeStep(challenge.id, stepId, editingStepTitle.trim());
+      await updateChallengeStep(challenge.id, stepId, { title: editingStepTitle.trim() });
     }
     setEditingStepId(null);
   };
 
   const handleAddStep = async (challengeId: string) => {
     if (!newStepTitle.trim() || !addChallengeStep) return;
-    await addChallengeStep(challengeId, newStepTitle.trim());
-    setNewStepTitle("");
+    const title = newStepTitle.trim();
     setAddingStepTo(null);
+    setNewStepTitle("");
+    await addChallengeStep(challengeId, title);
   };
 
   const handleDeleteStep = async (challengeId: string, stepId: string, e: React.MouseEvent) => {
@@ -179,14 +310,37 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   const handleDeleteResource = async (challenge: any, url: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Delete this resource?") && updateChallenge) {
-      const resources = challenge.resources.filter((r: any) => r.url !== url);
-      await updateChallenge(challenge.id, { resources });
-    }
+    openConfirm({
+      title: "Remove Resource?",
+      message: "Are you sure you want to remove this learning resource? You can add it back later if needed.",
+      confirmText: "Remove",
+      onConfirm: async () => {
+        if (updateChallenge) {
+          const resources = challenge.resources.filter((r: any) => r.url !== url);
+          await updateChallenge(challenge.id, { resources });
+        }
+      }
+    });
   };
+
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="max-w-4xl w-full space-y-8 pb-12">
+      {/* Today's Date Header */}
+      <div className="flex items-center justify-between px-4 sm:px-0">
+        <div>
+          <h2 className="text-2xl font-black tracking-tighter text-foreground flex items-center gap-2">
+             Skill Track
+             <ContextHelp 
+               title="What is a Skill Track?" 
+               description="Your AI-generated growth roadmap. It breaks down complex roles into manageable milestones and concrete action steps." 
+             />
+          </h2>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em]">{today}</p>
+        </div>
+      </div>
+
       {sortedRoles.length === 0 ? (
         <div className="bg-card rounded-2xl p-12 border border-border text-center shadow-xl">
           <span className="text-6xl block mb-4">💡</span>
@@ -201,7 +355,12 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
           const isCollapsed = collapsedRoles.includes(role);
 
           return (
-            <div key={role} className="glass-panel rounded-2xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl">
+            <div
+              key={role}
+              id={`track-${role.toLowerCase().replace(/\s+/g, '-')}`}
+              data-role-track={role}
+              className="glass-panel rounded-2xl border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-xl"
+            >
               {/* Progress Banner */}
               <div
                 className="bg-primary/5 px-6 py-4 border-b border-border/50 flex justify-between items-center group/track cursor-pointer hover:bg-primary/10 transition-colors"
@@ -212,17 +371,44 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                     <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
                       <span className="w-2 h-6 bg-primary rounded-full transition-all group-hover/track:scale-y-125" />
                       {role} Track
-                      <div className="ml-2 text-muted-foreground group-hover/track:text-primary transition-colors">
-                        {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                      </div>
+                      <ContextHelp 
+                        title="Dynamic Strategies" 
+                        description="The AI dynamically calculates the best way to approach this specific challenge based on the current date and your experience level."
+                      />
                     </h2>
+                    {trackDeadlines[role] && (
+                      <div className="flex items-center gap-2 ml-4">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Target: {formatDeadlineDate(trackDeadlines[role])}
+                        </span>
+                        {(() => {
+                          const status = getDeadlineStatus(trackDeadlines[role]);
+                          return status ? (
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${status.color}`}>
+                              {status.label}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete entire ${role} track? This cannot be undone.`)) {
-                        deleteRoleTrack && deleteRoleTrack(role);
-                      }
+                      openConfirm({
+                        title: "Delete Skill Track?",
+                        message: (
+                          <>
+                            Are you sure you want to delete the <span className="font-bold text-foreground">"{role}"</span> track? 
+                            This will remove everything and cannot be undone.
+                          </>
+                        ),
+                        confirmText: "Destroy Track",
+                        onConfirm: async () => {
+                          if (deleteRoleTrack) await deleteRoleTrack(role);
+                        }
+                      });
                     }}
                     className="p-2 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/track:opacity-100 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all rounded-lg"
                     title="Delete entire track"
@@ -286,8 +472,14 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                         {roleChallenges.map((challenge) => (
                           <div
                             key={challenge.id}
-                            className={`group border rounded-xl transition-all duration-300 relative ${challenge.completed ? "bg-muted/10 border-border opacity-70" : "bg-background/80 border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 backdrop-blur-sm"
-                              }`}
+                            data-task-id={challenge.id}
+                            className={`group border rounded-xl transition-all duration-300 relative ${
+                                challenge.completed 
+                                  ? "bg-muted/10 border-border opacity-70" 
+                                  : expandedId === challenge.id
+                                    ? "bg-background border-primary/50 shadow-xl shadow-primary/5 ring-1 ring-primary/20"
+                                    : "bg-background/80 border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 backdrop-blur-sm"
+                               }`}
                           >
                             <div className="p-4 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-4 flex-1">
@@ -372,7 +564,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   </AnimatePresence>
 
                                   {challenge.steps.length > 0 && editingChallengeId !== challenge.id && (
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                       <div className="flex -space-x-1">
                                         {challenge.steps.slice(0, 3).map((_step: any, i: number) => (
                                           <div key={i} className={`w-1.5 h-1.5 rounded-full border border-background ${challenge.steps[i].completed ? "bg-primary" : "bg-muted-foreground/30"}`} />
@@ -381,8 +573,72 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                         {challenge.steps.filter((s: any) => s.completed).length}/{challenge.steps.length} Steps
                                       </span>
+                                      {challenge.deadline && !challenge.completed && (() => {
+                                        const status = getDeadlineStatus(challenge.deadline);
+                                        return status ? (
+                                          <div className="relative">
+                                            {editingDeadlineId === challenge.id ? (
+                                              <input
+                                                type="date"
+                                                autoFocus
+                                                value={tempDeadline || challenge.deadline}
+                                                onChange={(e) => {
+                                                  setTempDeadline(e.target.value);
+                                                  saveDeadline(challenge.id, e.target.value);
+                                                }}
+                                                onBlur={() => setEditingDeadlineId(null)}
+                                                className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                              />
+                                            ) : (
+                                              <button 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingDeadlineId(challenge.id);
+                                                  setTempDeadline(challenge.deadline);
+                                                }}
+                                                className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 hover:brightness-110 active:scale-95 transition-all ${status.color}`}
+                                              >
+                                                <Clock className="w-2.5 h-2.5" />
+                                                {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                              </button>
+                                            )}
+                                          </div>
+                                        ) : null;
+                                      })()}
                                     </div>
                                   )}
+                                  {challenge.deadline && challenge.steps.length === 0 && editingChallengeId !== challenge.id && !challenge.completed && (() => {
+                                    const status = getDeadlineStatus(challenge.deadline);
+                                    return status ? (
+                                      <div className="mt-1">
+                                        {editingDeadlineId === challenge.id ? (
+                                          <input
+                                            type="date"
+                                            autoFocus
+                                            value={tempDeadline || challenge.deadline}
+                                            onChange={(e) => {
+                                              setTempDeadline(e.target.value);
+                                              saveDeadline(challenge.id, e.target.value);
+                                            }}
+                                            onBlur={() => setEditingDeadlineId(null)}
+                                            className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                                          />
+                                        ) : (
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingDeadlineId(challenge.id);
+                                              setTempDeadline(challenge.deadline);
+                                            }}
+                                            className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex items-center gap-1 w-fit hover:brightness-110 active:scale-95 transition-all ${status.color}`}
+                                          >
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {formatDeadlineDate(challenge.deadline)} · {status.label}
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : null;
+                                  })()}
                                   {expandingIds.includes(challenge.id) && (
                                     <div className="flex items-center gap-2 mt-2">
                                       <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
@@ -406,14 +662,35 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-border bg-muted/5 px-12 pb-5 pt-2 relative"
+                                  className="overflow-hidden border-t border-border bg-muted/5 px-4 sm:px-12 pb-5 pt-2 relative"
                                 >
                                   {expandingIds.includes(challenge.id) ? (
-                                    <div className="py-8 text-center flex flex-col items-center">
+                                    <div className="py-12 text-center flex flex-col items-center justify-center min-h-[200px] relative">
+                                      {/* Cancel Button */}
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          abortExpansion(challenge.id);
+                                        }}
+                                        className="absolute top-0 right-0 p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all group/cancel"
+                                        title="Cancel AI request"
+                                      >
+                                        <X className="w-5 h-5 transition-transform group-hover/cancel:rotate-90" />
+                                      </button>
+
                                       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4" />
                                       <p className="text-sm font-bold text-foreground">AI Strategy Loading...</p>
+                                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-2">Personalizing your growth track</p>
+                                      
+                                      <button 
+                                        onClick={() => abortExpansion(challenge.id)}
+                                        className="mt-6 px-4 py-1.5 rounded-full border border-border text-[10px] font-black uppercase tracking-[0.2em] hover:bg-muted transition-all"
+                                      >
+                                        Cancel Request
+                                      </button>
                                     </div>
                                   ) : (
+                                    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-[200px]">
                                     <>
                                       <div className="flex items-center justify-between mt-4 mb-2">
                                         <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Breakdown</h4>
@@ -449,9 +726,10 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </motion.div>
                                       )}
 
-                                      {challenge.steps.length > 0 ? (
+                                      {/* Filter out any steps with empty titles before rendering */}
+                                      {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).length > 0 ? (
                                         <div className="space-y-2">
-                                          {challenge.steps.map((step: any) => (
+                                          {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).map((step: any) => (
                                             <div
                                               key={step.id}
                                               className="flex items-center justify-between text-sm group/step py-1.5 px-3 rounded-lg hover:bg-background/50 transition-colors border border-transparent hover:border-border/50"
@@ -477,9 +755,47 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                                     <button onClick={() => setEditingStepId(null)} className="p-1 hover:bg-muted text-red-500 rounded"><X className="w-4 h-4" /></button>
                                                   </div>
                                                 ) : (
-                                                  <span className={`font-medium text-[13px] transition-all ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
-                                                    {step.title}
-                                                  </span>
+                                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    <span className={`font-medium text-[13px] transition-all flex-shrink ${step.completed ? "text-muted-foreground line-through" : "text-foreground group-hover/step:translate-x-0.5"}`}>
+                                                      {step.title}
+                                                    </span>
+                                                    
+                                                    <div className="relative flex-shrink-0">
+                                                      {editingStepDeadlineId === step.id ? (
+                                                        <input
+                                                          type="date"
+                                                          autoFocus
+                                                          value={stepTempDeadline || step.deadline || ""}
+                                                          onChange={async (e) => {
+                                                            setStepTempDeadline(e.target.value);
+                                                            if (updateChallengeStep) {
+                                                              await updateChallengeStep(challenge.id, step.id, { deadline: e.target.value });
+                                                              setEditingStepDeadlineId(null);
+                                                            }
+                                                          }}
+                                                          onBlur={() => setEditingStepDeadlineId(null)}
+                                                          className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border bg-background border-primary text-primary outline-none focus:ring-2 focus:ring-primary/20 appearance-none h-5"
+                                                        />
+                                                      ) : (
+                                                        <button 
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingStepDeadlineId(step.id);
+                                                            setStepTempDeadline(step.deadline || "");
+                                                          }}
+                                                          className={cn(
+                                                            "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all active:scale-95",
+                                                            step.deadline 
+                                                              ? getDeadlineStatus(step.deadline)?.color 
+                                                              : "text-muted-foreground/60 border-border/50 hover:border-primary/30 hover:text-primary"
+                                                          )}
+                                                        >
+                                                          <Calendar className="w-2.5 h-2.5" />
+                                                          {step.deadline ? formatDeadlineDate(step.deadline) : "Add Date"}
+                                                        </button>
+                                                      )}
+                                                    </div>
+                                                  </div>
                                                 )}
                                               </div>
 
@@ -515,7 +831,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </div>
 
                                         {addingResourceTo === challenge.id && (
-                                          <form onSubmit={(e) => handleAddResource(challenge, e)} className="flex gap-2 bg-background p-2 rounded-xl border border-primary/20">
+                                          <form onSubmit={(e) => handleAddResource(challenge, e)} className="flex flex-col sm:flex-row gap-2 bg-background p-2 rounded-xl border border-primary/20">
                                             <input
                                               value={newResourceTitle} onChange={e => setNewResourceTitle(e.target.value)}
                                               placeholder="Title (optional)" className="flex-1 bg-transparent px-2 text-sm outline-none border-r border-border"
@@ -556,6 +872,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                         </div>
                                       </div>
                                     </>
+                                  </motion.div>
                                   )}
                                 </motion.div>
                               )}

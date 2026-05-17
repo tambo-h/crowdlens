@@ -24,9 +24,8 @@ export const linkCardSchema = z.object({
 import { useProductivity } from "@/context/productivity-context";
 import { useEffect, useState } from "react";
 import { getSavedLinks, deleteLink as deleteLinkService, saveLink as saveLinkService } from "@/services/productivity-service";
-import { Trash2, ExternalLink, Plus, X } from "lucide-react";
-
-type LinkCardProps = z.infer<typeof linkCardSchema>;
+import { Trash2, ExternalLink, Plus, X, AlertOctagon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 function LinkPreview({ url }: { url: string }) {
   const [preview, setPreview] = useState<any>(null);
@@ -63,7 +62,7 @@ function LinkPreview({ url }: { url: string }) {
 }
 
 export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) {
-  const { userId, creativeRefreshTrigger, triggerCreativeRefresh } = useProductivity();
+  const { userId, creativeRefreshTrigger, triggerCreativeRefresh, openConfirm } = useProductivity();
   const [links, setLinks] = useState<any[]>(initialLinks);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -79,9 +78,17 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!userId || !confirm("Delete this link?")) return;
-    await deleteLinkService(userId, id);
-    triggerCreativeRefresh();
+    if (!userId) return;
+    
+    openConfirm({
+      title: "Delete saved link?",
+      message: "Are you sure you want to remove this resource from your knowledge base?",
+      confirmText: "Remove Link",
+      onConfirm: async () => {
+        await deleteLinkService(userId, id);
+        triggerCreativeRefresh();
+      }
+    });
   };
 
   const handleAddLink = async (e: React.FormEvent) => {
@@ -107,7 +114,6 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
   const getSafeHostname = (urlStr: string) => {
     try {
       if (!urlStr) return "link";
-      // Handle cases where URL might not have protocol
       const normalizedUrl = urlStr.includes("://") ? urlStr : `https://${urlStr}`;
       return new URL(normalizedUrl).hostname;
     } catch (e) {
@@ -205,7 +211,6 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
               </div>
             </a>
 
-            {/* Actions for manual management (Bug 1) */}
             <div className="absolute top-2 right-2 flex gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/link:opacity-100 transition-opacity">
               <button
                 onClick={(e) => handleDelete(e, link.id)}

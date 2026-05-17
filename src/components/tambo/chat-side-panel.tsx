@@ -25,7 +25,7 @@ export function ChatSidePanel() {
                         whileHover={{ scale: 1.1, y: -5 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => setIsChatOpen(true)}
-                        className="fixed bottom-8 right-8 z-50 p-5 bg-primary text-primary-foreground rounded-3xl shadow-[0_20px_50px_rgba(99,102,241,0.4)] hover:shadow-[0_25px_60px_rgba(99,102,241,0.5)] transition-all duration-500 group pointer-events-auto border border-white/20"
+                        className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 p-4 md:p-5 bg-primary text-primary-foreground rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(61,61,61,0.3)] hover:shadow-[0_25px_60px_rgba(61,61,61,0.4)] transition-all duration-500 group pointer-events-auto border border-white/20"
                     >
                         <div className="relative">
                             <MessageSquare className="w-6 h-6" />
@@ -49,16 +49,17 @@ export function ChatSidePanel() {
                             x: 0,
                             scale: 1,
                             filter: "blur(0px)",
-                            width: isFullscreen ? "100vw" : Math.max(350, Math.min(panelWidth, 850)),
                         }}
                         exit={{ opacity: 0, x: "20%", scale: 0.95, filter: "blur(20px)" }}
                         transition={{ type: "spring", stiffness: 200, damping: 25 }}
                         className={cn(
-                            "fixed top-4 right-4 bottom-4 flex flex-col glass-panel border border-border/50 rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] pointer-events-auto origin-right overflow-hidden",
-                            isFullscreen ? "top-0 right-0 bottom-0 left-0 rounded-0" : ""
+                            "fixed flex flex-col glass-panel border border-border/50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] dark:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] pointer-events-auto origin-right overflow-hidden",
+                            isFullscreen
+                              ? "inset-0 rounded-none"
+                              : "inset-0 rounded-none md:top-4 md:right-4 md:bottom-4 md:left-auto md:rounded-[2.5rem]"
                         )}
                         style={{
-                            maxWidth: isFullscreen ? "100vw" : "90vw",
+                            width: isFullscreen ? undefined : (typeof window !== 'undefined' && window.innerWidth >= 768 ? Math.max(350, Math.min(panelWidth, 850)) : undefined),
                             direction: "rtl"
                         }}
                     >
@@ -76,20 +77,7 @@ export function ChatSidePanel() {
                                         <Sparkles className="w-5 h-5 text-white" />
                                     </motion.div>
                                     <div>
-                                        <h2 className="text-sm font-black text-foreground uppercase tracking-tighter">Tambo Intelligence</h2>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex gap-0.5">
-                                                {[1, 2, 3].map(i => (
-                                                    <motion.span
-                                                        key={i}
-                                                        animate={{ opacity: [0.3, 1, 0.3] }}
-                                                        transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
-                                                        className="w-1 h-3 bg-green-500/50 rounded-full"
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="text-[10px] text-green-400 font-black uppercase tracking-widest">Active System</span>
-                                        </div>
+                                        <h2 className="text-sm font-black text-foreground uppercase tracking-tighter">AI challenge assistant</h2>
                                     </div>
                                 </div>
 

@@ -35,67 +35,58 @@
 }
 
 :root {
-  /* Primary Colors: Indigo/Purple from onboarding */
-  --color-primary-blue: #6366f1;
-  --color-primary-blue-light: #818cf8;
+  /* Doodle White — Warm Cream/Beige Palette */
+  --color-primary-blue: #3d3d3d;
+  --color-primary-blue-light: #5a5a5a;
 
-  /* Background Colors: Off-white and light grays for calmness */
-  --color-bg-main: #FAF9F6;
-  --color-bg-surface: #F5F7FA;
-  --color-bg-card: #FFFFFF;
+  /* Background Colors: Warm cream tones */
+  --color-bg-main: #f5f0eb;
+  --color-bg-surface: #ece5dd;
+  --color-bg-card: #fefcf9;
 
-  /* Accent: Muted green for success and highlights */
-  --color-accent-green: #95D5B2;
+  /* Accent: Warm taupe */
+  --color-accent-green: #c4b5a5;
 
-  /* Text Colors: Charcoal gray for readability */
-  --color-text-primary: #2D3436;
-  --color-text-secondary: #636E72;
-  --color-text-muted: #95A5A6;
+  /* Text Colors: Warm charcoal */
+  --color-text-primary: #2c2c2c;
+  --color-text-secondary: #6b6259;
+  --color-text-muted: #8a8278;
 
-  /* Tailwind CSS Variables (mapped to Calm Dev theme) */
-  --background: oklch(0.99 0.005 60);
-  /* #FAF9F6 */
-  --foreground: oklch(0.25 0.01 250);
-  /* #2D3436 */
-  --card: oklch(1 0 0);
-  /* #FFFFFF */
-  --card-foreground: oklch(0.25 0.01 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.01 250);
-  --primary: oklch(0.60 0.18 260);
-  /* #6366f1 - indigo/purple */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.70 0.15 260);
-  /* #818cf8 - lighter indigo */
-  --secondary-foreground: oklch(0.25 0.01 250);
-  --muted: oklch(0.96 0.005 240);
-  /* #F5F7FA */
-  --muted-foreground: oklch(0.55 0.01 240);
-  /* #636E72 */
-  --accent: oklch(0.80 0.08 150);
-  /* #95D5B2 - muted green */
-  --accent-foreground: oklch(0.25 0.01 250);
-  --destructive: oklch(0.64 0.2 25);
-  --border: oklch(0.90 0.01 240);
-  /* Light gray border */
-  --input: oklch(0.96 0.005 240);
-  --ring: oklch(0.82 0.06 230);
-  /* Matches primary */
-  --chart-1: oklch(0.82 0.06 230);
-  /* Soft blue */
-  --chart-2: oklch(0.80 0.08 150);
-  /* Muted green */
-  --chart-3: oklch(0.75 0.12 280);
-  /* Soft purple */
-  --chart-4: oklch(0.85 0.05 50);
-  /* Soft yellow */
-  --chart-5: oklch(0.70 0.15 330);
-  /* Soft pink */
+  /* Doodle White Tailwind CSS Variables */
+  --background: #f5f0eb;
+  --foreground: #2c2c2c;
+  --card: #fefcf9;
+  --card-foreground: #2c2c2c;
+  --popover: #fefcf9;
+  --popover-foreground: #2c2c2c;
+  --primary: #3d3d3d;
+  --primary-foreground: #fefcf9;
+  --secondary: #d6cfc7;
+  --secondary-foreground: #2c2c2c;
+  --muted: #ece5dd;
+  --muted-foreground: #8a8278;
+  --accent: #c4b5a5;
+  --accent-foreground: #2c2c2c;
+  --destructive: #c0392b;
+  --border: #ddd5cc;
+  --input: #ece5dd;
+  --ring: #3d3d3d;
+  /* Warm earthy chart palette */
+  --chart-1: #8b7355;
+  /* Warm brown */
+  --chart-2: #a0926b;
+  /* Olive tan */
+  --chart-3: #7d6b5d;
+  /* Mocha */
+  --chart-4: #b8a88a;
+  /* Sand */
+  --chart-5: #9c8878;
+  /* Taupe */
 
   /* Tambo Specific Variables needed for tambo components */
-  --container: oklch(0.98 0.005 240);
-  --backdrop: oklch(0.25 0.07 252 / 0.25);
-  --muted-backdrop: oklch(0.25 0.07 252 / 0.1);
+  --container: #efe9e1;
+  --backdrop: rgba(44, 44, 44, 0.2);
+  --muted-backdrop: rgba(44, 44, 44, 0.08);
   --radius: 0.5rem;
   --panel-left-width: 500px;
   --panel-right-width: 500px;
@@ -103,62 +94,52 @@
 }
 
 .dark {
-  /* Calm Dev Theme - Dark Mode */
-  /* Premium Dark tones to match onboarding */
-  --color-primary-blue: #6366f1;
-  --color-primary-blue-light: #818cf8;
-  --color-bg-main: #050505;
-  --color-bg-surface: #0a0a0a;
-  --color-bg-card: #0f0f0f;
-  --color-accent-green: #7DB99A;
-  --color-text-primary: #fcfcfc;
-  --color-text-secondary: #a1a1a1;
-  --color-text-muted: #717171;
+  /* VS Code Dark+ Theme */
+  --color-primary-blue: #007acc;
+  --color-primary-blue-light: #569cd6;
+  --color-bg-main: #1e1e1e;
+  --color-bg-surface: #252526;
+  --color-bg-card: #2d2d2d;
+  --color-accent-green: #6a9955;
+  --color-text-primary: #d4d4d4;
+  --color-text-secondary: #9cdcfe;
+  --color-text-muted: #808080;
 
-  /* Dark Mode Tailwind CSS Variables (mapped to premium dark theme) */
-  --background: oklch(0.12 0.005 250);
-  /* #050505 approx */
-  --foreground: oklch(0.98 0 0);
-  /* #fcfcfc */
-  --card: oklch(0.14 0.005 250);
-  /* #0f0f0f */
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.14 0.005 250);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.60 0.18 260);
-  /* #6366f1 */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.70 0.15 260);
-  /* #818cf8 */
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.14 0.005 250);
-  /* #0a0a0a approx */
-  --muted-foreground: oklch(0.63 0.005 250);
-  /* #a1a1a1 approx */
-  --accent: oklch(0.68 0.08 150);
-  /* #7DB99A - muted green */
-  --accent-foreground: oklch(0.18 0.01 250);
-  --destructive: oklch(0.64 0.2 25);
-  --border: oklch(0.30 0.01 250);
-  /* Dark border */
-  --input: oklch(0.25 0.01 250);
-  --ring: oklch(0.68 0.06 230);
-  /* Matches primary */
-  --chart-1: oklch(0.68 0.06 230);
-  /* Muted blue */
-  --chart-2: oklch(0.68 0.08 150);
-  /* Muted green */
-  --chart-3: oklch(0.65 0.12 280);
-  /* Muted purple */
-  --chart-4: oklch(0.75 0.08 50);
-  /* Muted yellow */
-  --chart-5: oklch(0.60 0.15 330);
-  /* Muted pink */
+  /* VS Code Dark+ Tailwind CSS Variables */
+  --background: #1e1e1e;
+  --foreground: #d4d4d4;
+  --card: #252526;
+  --card-foreground: #d4d4d4;
+  --popover: #252526;
+  --popover-foreground: #d4d4d4;
+  --primary: #007acc;
+  --primary-foreground: #ffffff;
+  --secondary: #264f78;
+  --secondary-foreground: #d4d4d4;
+  --muted: #2d2d2d;
+  --muted-foreground: #808080;
+  --accent: #6a9955;
+  --accent-foreground: #d4d4d4;
+  --destructive: #f44747;
+  --border: #3c3c3c;
+  --input: #3c3c3c;
+  --ring: #007acc;
+  /* VS Code token colors for charts */
+  --chart-1: #569cd6;
+  /* Blue - keywords */
+  --chart-2: #6a9955;
+  /* Green - strings */
+  --chart-3: #c586c0;
+  /* Purple - control flow */
+  --chart-4: #dcdcaa;
+  /* Yellow - functions */
+  --chart-5: #ce9178;
+  /* Orange - strings */
 
   /* Tambo Specific Variables needed for tambo components */
-  --container: oklch(0.22 0.01 250);
-  --backdrop: oklch(0.10 0.01 250 / 0.5);
-  --muted-backdrop: oklch(0.10 0.01 250 / 0.2);
+  --container: #333333;
+  --backdrop: rgba(0, 0, 0, 0.5);
+  --muted-backdrop: rgba(0, 0, 0, 0.2);
   --radius: 0.5rem;
   --panel-left-width: 500px;
   --panel-right-width: 500px;
@@ -198,24 +179,24 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--color-bg-surface, #F5F7FA);
+    background: #ece5dd;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--color-primary-blue, #A2D2FF);
+    background: #c4b5a5;
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-primary-blue-light, #BDE0FE);
+    background: #8a8278;
   }
 
   .dark ::-webkit-scrollbar-track {
-    background: var(--color-bg-surface, #22262E);
+    background: #252526;
   }
 
   .dark ::-webkit-scrollbar-thumb {
-    background: var(--color-primary-blue, #7BAFD4);
+    background: #007acc;
   }
 }
 
@@ -292,18 +273,18 @@ You can remove this if you don't want to use it.
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(254, 252, 249, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  border: 1px solid #ddd5cc;
+  box-shadow: 0 8px 32px 0 rgba(44, 44, 44, 0.06);
 }
 
 .dark .glass-panel {
-  background: rgba(10, 10, 10, 0.6);
+  background: rgba(37, 37, 38, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid #3c3c3c;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -327,11 +308,11 @@ You can remove this if you don't want to use it.
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 122, 204, 0.4);
 }
 
 /* Base polish */
@@ -342,4 +323,21 @@ You can remove this if you don't want to use it.
 [data-slot="message-input-form"]:focus-within {
   transform: translateY(-2px);
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth touch scrolling */
+@media (hover: none) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

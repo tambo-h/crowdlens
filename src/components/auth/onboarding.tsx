@@ -38,6 +38,9 @@ export const Onboarding = () => {
         if (e.key === "Backspace" && !pin[index] && index > 0) {
             pinRefs[index - 1].current?.focus();
         }
+        if (e.key === "Enter" && pin.join("").length === 6) {
+            handlePinSubmit();
+        }
     };
 
     const handlePinSubmit = () => {
@@ -53,9 +56,9 @@ export const Onboarding = () => {
     };
 
     const setupExamples = [
-        { label: "Next.js Dev", icon: "🌐", prompt: "setup my workspace as a nextjs developer" },
-        { label: "Business Analyst", icon: "📊", prompt: "setup my workspace as a business analyst" },
-        { label: "Project Manager", icon: "📅", prompt: "setup my workspace as a project manager" },
+        { label: "Spanish", icon: "🥘", prompt: "setup my workspace for learning Spanish" },
+        { label: "Sugar-Free", icon: "🚫", prompt: "setup my workspace for quitting sugar" },
+        { label: "High Protein", icon: "🥩", prompt: "setup my workspace to do high protein diet" },
     ];
 
     const [isLoading, setIsLoading] = useState(false);

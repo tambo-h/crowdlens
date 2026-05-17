@@ -35,8 +35,9 @@ import { useProductivity } from "@/context/productivity-context";
 import { useEffect, useState } from "react";
 import { getProductivityDashboard } from "@/services/productivity-service";
 import { motion } from "framer-motion";
-import { ShieldCheck, Sparkles, ArrowRight, TrendingUp, Zap, Target, Clock, LifeBuoy } from "lucide-react";
+import { ShieldCheck, Sparkles, ArrowRight, TrendingUp, Zap, Target, Clock, LifeBuoy, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ContextHelp } from "@/components/ui/context-help";
 
 export function ProductivityDashboard({
   userName: initialUserName,
@@ -44,6 +45,12 @@ export function ProductivityDashboard({
 }: ProductivityDashboardProps) {
   const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger } = useProductivity();
   const [stats, setStats] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -51,7 +58,7 @@ export function ProductivityDashboard({
   }, [userId, creativeRefreshTrigger]);
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = currentTime.getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
@@ -69,11 +76,9 @@ export function ProductivityDashboard({
   const {
     userName = initialUserName || "User",
     pomodoroSessionsToday,
-    challengesCompleted,
+    challengesCompletedToday,
     totalChallenges,
     currentStreak,
-    recentLinks,
-    quote,
   } = dashboardData;
 
   const containerVariants = {
@@ -101,32 +106,47 @@ export function ProductivityDashboard({
       >
         {/* Header */}
         <header className="mb-12">
-          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
+          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex-1">
               <motion.h1
-                className="text-4xl md:text-5xl font-black text-foreground mb-3 tracking-tight"
+                className="text-4xl md:text-6xl font-black text-foreground mb-4 tracking-tighter"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
               >
-                {getGreeting()}{userName ? `, ${userName}` : ""}! <span className="inline-block animate-bounce-slow">👋</span>
+                {getGreeting()}{userName ? `, ${userName}` : ""}! <span className="inline-block animate-bounce-slow">✨</span>
               </motion.h1>
-              <p className="text-muted-foreground font-medium flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-muted-foreground">
+                <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-2xl border border-border/50">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold tabular-nums">
+                    {currentTime.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-2xl border border-border/50">
+                  <Clock className="w-4 h-4 text-accent" />
+                  <span className="text-sm font-semibold">
+                    {currentTime.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <div className="px-4 py-2 rounded-full bg-primary/5 border border-primary/10 text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Productivity Boost Active
+            <div className="flex flex-col items-end gap-3">
+              <div className="px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2 shadow-lg shadow-primary/5">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                Growth Mode: Active
               </div>
+              {userId && (
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-1">
+                  ID: {userId.replace("up_", "")}
+                </div>
+              )}
             </div>
           </motion.div>
         </header>
@@ -146,7 +166,13 @@ export function ProductivityDashboard({
               <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                 <Clock className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Flow Sessions</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Flow Sessions</span>
+                <ContextHelp
+                  title="What is Flow?"
+                  description="A period of intense focus. We use the Pomodoro technique (25 min focus + 5 min break) to help you get into the 'zone' without burning out."
+                />
+              </div>
             </div>
             <p className="text-4xl font-black text-foreground mb-1">{pomodoroSessionsToday}</p>
             <p className="text-xs text-muted-foreground font-medium">
@@ -167,13 +193,19 @@ export function ProductivityDashboard({
               <div className="w-10 h-10 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
                 <Target className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Skill Mastery</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Skill Mastery</span>
+                <ContextHelp
+                  title="Mastery Tracking"
+                  description="Your cumulative progress across all tracks. We track how many unique roles you're cultivating and how many challenges you've mastered."
+                />
+              </div>
             </div>
             <p className="text-4xl font-black text-foreground mb-1">
               {Array.from(new Set(challenges.map(c => c.role || "General"))).length}
             </p>
             <p className="text-xs text-muted-foreground font-medium">
-              {challengesCompleted}/{totalChallenges} tasks finished
+              {challengesCompletedToday}/{totalChallenges} tasks finished
             </p>
           </motion.div>
 
@@ -209,7 +241,13 @@ export function ProductivityDashboard({
               <div className="w-10 h-10 rounded-2xl bg-indigo-400/10 flex items-center justify-center text-indigo-400">
                 <Zap className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Biometric Energy</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Biometric Energy</span>
+                <ContextHelp
+                  title="Understand Your Energy"
+                  description="A scale of 1-10 reflecting your cognitive capacity. When it drops below 3, the OS switches to 'Recovery Mode' to help you recharge."
+                />
+              </div>
             </div>
             <p className="text-4xl font-black text-indigo-400 mb-1">
               {currentEnergy !== null ? `${currentEnergy}/10` : "--"}
@@ -220,51 +258,87 @@ export function ProductivityDashboard({
           </motion.div>
         </div>
 
-        {/* Quote & Insights Row */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Daily Wisdom & Weekend Reflection */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           <motion.div
             variants={itemVariants}
-            className="xl:col-span-2 bg-gradient-to-br from-primary/10 via-background to-accent/10 rounded-[2rem] p-8 border border-primary/20 relative overflow-hidden group shadow-2xl shadow-primary/5"
+            className="lg:col-span-7 xl:col-span-8 bg-gradient-to-br from-indigo-500/5 via-background to-primary/5 rounded-[2.5rem] p-6 md:p-10 lg:p-12 border border-border/50 relative overflow-hidden group shadow-2xl"
           >
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px] group-hover:bg-primary/20 transition-all duration-1000" />
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-                <Zap className="w-3 h-3" /> Daily Insight
-              </div>
-              <p className="text-2xl md:text-3xl font-bold text-foreground mb-6 leading-tight italic">
-                "{quote?.text}"
-              </p>
-              <div className="flex items-center justify-between border-t border-border/50 pt-6 mt-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center font-bold text-muted-foreground">
-                    {quote?.author.charAt(0)}
-                  </div>
-                  <span className="font-bold text-foreground">{quote?.author}</span>
-                </div>
-                <button className="p-3 rounded-full bg-background border border-border hover:bg-muted hover:scale-110 transition-all shadow-sm">
-                  <ArrowRight className="w-4 h-4 text-primary" />
-                </button>
-              </div>
+            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+              <Sparkles className="w-64 h-64 text-primary" />
+            </div>
+
+            <div className="relative z-10 max-w-2xl">
+              {(() => {
+                const day = currentTime.getDay();
+                const isWeekend = day === 0 || day === 6;
+                const dailyQuotes = [
+                  { text: "Rest is not idleness, and to lie sometimes on the grass under trees... is by no means a waste of time.", author: "John Lubbock" }, // Sun
+                  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" }, // Mon
+                  { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" }, // Tue
+                  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" }, // Wed
+                  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" }, // Thu
+                  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" }, // Fri
+                  { text: "The weekend is a time to reconnect with your soul and recharge your vision.", author: "Inspiration" } // Sat
+                ];
+
+                return (
+                  <>
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-6 flex items-center gap-3">
+                      <div className="w-10 h-px bg-primary/30" />
+                      {isWeekend ? "Weekend Reflection" : "Daily Wisdom"}
+                    </h2>
+
+                    {isWeekend ? (
+                      <div className="space-y-6">
+                        <p className="text-2xl md:text-3xl font-black text-foreground leading-[1.1] tracking-tight">
+                          I see you are working through the weekend. You must be working extremely hard, but remember to breathe.
+                        </p>
+                        <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-medium bg-primary/5 p-6 rounded-2xl border-l-4 border-primary">
+                          Work can wait, but your time cannot. Every week you spend grinding away now, you might regret at 60 if you didn't enjoy the journey.
+                          <span className="block mt-3 text-foreground font-bold">
+                            If you're working today, let it be for upskilling and personal growth—not just for others. Invest in yourself.
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-3xl md:text-5xl font-black text-foreground leading-none tracking-tighter mb-4">
+                          "{dailyQuotes[day].text}"
+                        </p>
+                        <p className="text-primary font-black uppercase tracking-widest text-xs">— {dailyQuotes[day].author}</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </motion.div>
 
           <motion.div
             variants={itemVariants}
-            className="bg-card/40 backdrop-blur-xl rounded-[2rem] p-8 border border-border shadow-xl h-full"
+            className="lg:col-span-5 xl:col-span-4 bg-card/60 backdrop-blur-2xl rounded-[2.5rem] p-6 md:p-8 border border-border shadow-2xl flex flex-col"
           >
-            <h3 className="text-lg font-black text-foreground mb-6 flex items-center gap-2 uppercase tracking-tight">
-              <Target className="w-5 h-5 text-accent" />
-              Pulse
+            <h3 className="text-[10px] font-black text-muted-foreground mb-6 md:mb-8 flex items-center gap-3 uppercase tracking-[0.3em]">
+              <div className="w-2 h-2 rounded-full bg-accent" />
+              Skill Momentum
             </h3>
-            <div className="space-y-4">
+
+            <div className="space-y-6 flex-1 flex flex-col justify-center">
               {[
-                { label: "Focus Efficiency", value: "92%", color: "text-green-400" },
-                { label: "Completion Rate", value: "78%", color: "text-primary" },
-                { label: "Energy Stability", value: "High", color: "text-indigo-400" },
+                { label: "Track Progress", value: totalChallenges > 0 ? `${Math.round((challengesCompletedToday / totalChallenges) * 100)}%` : "0%", sub: "Completed Today", color: "bg-primary/20 text-primary" },
+                { label: "Active Roles", value: Array.from(new Set(challenges.map(c => c.role || "General"))).length.toString(), sub: "Personalized Tracks", color: "bg-accent/20 text-accent" },
+                { label: "Current Focus", value: challenges.find(c => !c.completed)?.title || "None", sub: "Priority Task", color: "bg-orange-500/20 text-orange-400" },
               ].map((metric) => (
-                <div key={metric.label} className="p-4 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
-                  <span className="text-xs font-bold text-muted-foreground uppercase">{metric.label}</span>
-                  <span className={cn("text-lg font-black", metric.color)}>{metric.value}</span>
+                <div key={metric.label} className="group flex items-center gap-5 p-4 rounded-3xl hover:bg-muted/50 transition-all border border-transparent hover:border-border/50">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-inner", metric.color)}>
+                    {metric.value.includes('%') ? <TrendingUp className="w-5 h-5" /> : metric.value.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1.5">{metric.label}</p>
+                    <p className="text-base md:text-lg font-bold text-foreground leading-tight">{metric.value}</p>
+                    <p className="text-[9px] font-medium text-muted-foreground/60 uppercase mt-0.5">{metric.sub}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -291,7 +365,7 @@ export function ProductivityDashboard({
                   Your local-first data is encrypted. Use this unique PIN to sync your workspace across devices.
                 </p>
                 <div className="mt-auto flex items-center justify-between p-5 bg-black/20 backdrop-blur-md rounded-2xl border border-white/5">
-                  <span className="text-3xl font-black tracking-[0.4em] text-white">
+                  <span className="text-xl sm:text-3xl font-black tracking-[0.3em] sm:tracking-[0.4em] text-white">
                     {userId?.replace("up_", "") || "000000"}
                   </span>
                   <button
@@ -315,8 +389,10 @@ export function ProductivityDashboard({
               </h3>
               <div className="space-y-4">
                 {[
+                  { label: "Spanish", prompt: "setup my workspace for learning Spanish", icon: "🥘" },
+                  { label: "Sugar-Free", prompt: "setup my workspace for quitting sugar", icon: "🚫" },
+                  { label: "High Protein", prompt: "setup my workspace to do high protein diet", icon: "🥩" },
                   { label: "Core Developer", prompt: "setup my workspace as a nextjs developer", icon: "🚀" },
-                  { label: "Strategic Lead", prompt: "setup my workspace as a business analyst", icon: "📊" },
                 ].map((ex) => (
                   <button
                     key={ex.label}
@@ -330,7 +406,7 @@ export function ProductivityDashboard({
                       <span className="text-2xl">{ex.icon}</span>
                       <div>
                         <p className="text-xs font-black text-foreground uppercase tracking-widest mb-1">{ex.label}</p>
-                        <p className="text-[11px] text-muted-foreground italic truncate max-w-[180px]">"{ex.prompt}"</p>
+                        <p className="text-[11px] text-muted-foreground italic truncate max-w-[140px] sm:max-w-[180px]">"{ex.prompt}"</p>
                       </div>
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -340,27 +416,6 @@ export function ProductivityDashboard({
             </div>
           </motion.div>
         )}
-
-        {/* Quick Actions / Navigation */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Flow Timer", icon: "⏳", color: "bg-primary/10 border-primary/20 text-primary" },
-            { label: "Skill Tracks", icon: "🎯", color: "bg-accent/10 border-accent/20 text-accent" },
-            { label: "Resource Hub", icon: "🔖", color: "bg-orange-500/10 border-orange-500/20 text-orange-400" },
-            { label: "Biometrics", icon: "📈", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-400" },
-          ].map((action, i) => (
-            <motion.button
-              key={i}
-              variants={itemVariants}
-              whileHover={{ y: -4, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn("p-6 rounded-[2rem] border transition-all text-center group", action.color)}
-            >
-              <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform">{action.icon}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest">{action.label}</span>
-            </motion.button>
-          ))}
-        </div>
       </motion.div>
     </div>
   );

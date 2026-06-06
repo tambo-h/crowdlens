@@ -8,7 +8,7 @@
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { generatePersonalizedData, generateChallengeDetails } from "./ai-service";
+import { generatePersonalizedData, generateChallengeDetails, generateTrackCoachReview } from "./ai-service";
 
 /**
  * Expand a challenge using AI to generate steps and resources
@@ -761,4 +761,26 @@ export async function saveUserPersona(userId: string, persona: UserPersona): Pro
     console.error("[Service] Error in saveUserPersona:", error);
     throw error;
   }
+}
+
+export async function getTrackCoachReview(userId: string, role: string): Promise<string> {
+  const challenges = await getChallenges(userId);
+  const roleChallenges = challenges.filter(c => c.role === role);
+  
+  const formattedChallenges = roleChallenges.map(c => ({
+    title: c.title,
+    completed: c.completed,
+    steps: (c.steps || []).map((s: any) => ({
+      title: s.title,
+      completed: s.completed,
+      deadline: s.deadline
+    }))
+  }));
+
+  const deadlines = await redis.get<Record<string, string>>(`deadlines:${userId}`) || {};
+  const trackDeadline = deadlines[role];
+  const persona = await getUserPersona(userId);
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  return await generateTrackCoachReview(role, trackDeadline, formattedChallenges, currentDate, persona);
 }

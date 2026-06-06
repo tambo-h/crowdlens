@@ -10,9 +10,10 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, RotateCcw, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
 import { ContextHelp } from "@/components/ui/context-help";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -62,6 +63,42 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
   } = useProductivity();
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+
+  const [coachFeedbacks, setCoachFeedbacks] = useState<Record<string, string>>({});
+  const [loadingFeedbackRoles, setLoadingFeedbackRoles] = useState<string[]>([]);
+
+  // Load coach feedback from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored: Record<string, string> = {};
+      const uniqueRoles = Array.from(new Set(challenges.map(c => c.role || "General")));
+      uniqueRoles.forEach(role => {
+        const key = `coach_feedback_${userId || 'guest'}_${role}`;
+        const val = localStorage.getItem(key);
+        if (val) stored[role] = val;
+      });
+      setCoachFeedbacks(stored);
+    }
+  }, [userId, challenges]);
+
+  const handleRequestReview = async (role: string) => {
+    if (!userId) return;
+    setLoadingFeedbackRoles(prev => [...prev, role]);
+    try {
+      const { getTrackCoachReview } = await import("@/services/productivity-service");
+      const review = await getTrackCoachReview(userId, role);
+      
+      setCoachFeedbacks(prev => {
+        const next = { ...prev, [role]: review };
+        localStorage.setItem(`coach_feedback_${userId || 'guest'}_${role}`, review);
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to generate coach feedback:", e);
+    } finally {
+      setLoadingFeedbackRoles(prev => prev.filter(r => r !== role));
+    }
+  };
 
   // Persistent expansion state
   useEffect(() => {
@@ -879,6 +916,88 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                             </AnimatePresence>
                           </div>
                         ))}
+                      </div>
+
+                      {/* AI Coaching Panel — bottom of track */}
+                      <div className="mt-6 bg-gradient-to-br from-primary/[0.03] to-accent/[0.01] border border-primary/10 rounded-2xl p-4 sm:p-5 relative overflow-hidden shadow-sm">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-border/40">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                              <Sparkles className="w-4 h-4 animate-pulse" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-foreground tracking-tight flex items-center gap-1.5">
+                                AI Track Coach
+                              </h4>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Personalized Progress Coaching</p>
+                            </div>
+                          </div>
+                          
+                          <button
+                            disabled={loadingFeedbackRoles.includes(role)}
+                            onClick={() => handleRequestReview(role)}
+                            className={cn(
+                              "px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 shadow-sm border border-primary/10",
+                              coachFeedbacks[role] 
+                                ? "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-primary/10"
+                            )}
+                          >
+                            {loadingFeedbackRoles.includes(role) ? (
+                              <>
+                                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : coachFeedbacks[role] ? (
+                              <>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Re-Analyze
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Get Review
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {loadingFeedbackRoles.includes(role) ? (
+                          <div className="py-6 space-y-4 animate-pulse">
+                            <div className="flex items-center gap-2">
+                              <div className="w-4.5 h-4.5 rounded-full bg-primary/15" />
+                              <div className="h-3 bg-muted rounded-full w-2/3" />
+                            </div>
+                            <div className="space-y-3">
+                              <div className="h-2.5 bg-muted rounded-full w-full" />
+                              <div className="h-2.5 bg-muted rounded-full w-11/12" />
+                              <div className="h-2.5 bg-muted rounded-full w-5/6" />
+                            </div>
+                          </div>
+                        ) : coachFeedbacks[role] ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed space-y-2 text-muted-foreground max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ node, ...props }) => <h1 className="text-xs font-black text-foreground mt-4 mb-2 uppercase tracking-widest text-primary bg-primary/5 px-2.5 py-1 rounded-lg inline-block" {...props} />,
+                                h2: ({ node, ...props }) => <h2 className="text-xs font-black text-foreground mt-3 mb-1.5 uppercase tracking-wide flex items-center gap-1.5" {...props} />,
+                                p: ({ node, ...props }) => <p className="text-xs text-muted-foreground leading-relaxed mb-2" {...props} />,
+                                ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1.5 text-xs text-muted-foreground mb-3" {...props} />,
+                                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 space-y-1.5 text-xs text-muted-foreground mb-3" {...props} />,
+                                li: ({ node, ...props }) => <li className="text-xs" {...props} />,
+                                strong: ({ node, ...props }) => <strong className="font-bold text-foreground" {...props} />,
+                              }}
+                            >
+                              {coachFeedbacks[role]}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <p className="text-xs text-muted-foreground">
+                              Let your AI coach review your progress, analyze task completion times, and suggest clear next steps.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>

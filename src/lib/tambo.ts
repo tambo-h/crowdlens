@@ -277,11 +277,10 @@ export const tools: TamboTool[] = [
     name: "setupPersonalizedWorkspace",
     description: `Generates and applies a personalized workspace track immediately. 
 CRITICAL RULES:
-1. Call this tool IMMEDIATELY when the user mentions any skill, goal, language, or workspace topic.
-2. NEVER ask follow-up questions before calling this tool. Just infer what you need.
+1. Call this tool IMMEDIATELY for ANY query, question, goal, or topic the user brings up. Every question or advice query must be transformed into a structured skills track (e.g. if the user asks 'how to be active at home', call this tool with skill='Being Active at Home').
+2. NEVER give generic text advice. NEVER ask follow-up questions. You MUST always execute this tool first to establish their skill track.
 3. If experienceLevel is not stated, use 'beginner'. If projectType is unclear, leave it empty.
-4. A user saying 'setup workspace for X' or 'learn X' or 'I want to do X' is enough to call this tool.
-5. In your response to the user, you MUST tell them that you have created these set of skills for them to achieve their goal.`,
+4. In your response to the user, you MUST tell them that you have created these set of skills for them to achieve their goal.`,
     tool: setupPersonalizedWorkspace as any,
     inputSchema: z.object({
       userId: z.string().optional(),

@@ -173,3 +173,79 @@ Respond ONLY with a JSON object:
         throw error;
     }
 }
+
+export async function generateTrackCoachReview(
+    role: string,
+    trackDeadline: string | undefined,
+    challenges: Array<{
+        title: string;
+        completed: boolean;
+        steps: Array<{ title: string; completed: boolean; deadline?: string }>;
+    }>,
+    currentDate: string,
+    persona?: any
+): Promise<string> {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("OPENROUTER_API_KEY is not configured. Please add it to your environment variables.");
+    }
+
+    let personaContext = "";
+    if (persona) {
+        personaContext = `\n\n[User Profile Persona Context]\n`;
+        if (persona.age) personaContext += `- Age: ${persona.age}\n`;
+        if (persona.gender) personaContext += `- Gender: ${persona.gender}\n`;
+        if (persona.city) personaContext += `- City: ${persona.city}\n`;
+        if (persona.workDesignation) personaContext += `- Work Designation: ${persona.workDesignation}\n`;
+        if (persona.interests) personaContext += `- Interests: ${persona.interests}\n`;
+        personaContext += `Use this user profile to customize the coaching advice, metaphors, and tone.`;
+    }
+
+    const prompt = `You are a high-performance productivity coach. Today's date is ${currentDate}.
+Analyze the user's progress for the "${role}" Skill Track and provide structured, highly personalized feedback.
+
+Track Target Completion Date: ${trackDeadline || "None set"}
+Challenges & Sub-tasks data:
+${JSON.stringify(challenges, null, 2)}
+${personaContext}
+
+Your feedback should include:
+1. **Summary & Stats**: Start with a personalized summary statement referencing specific counts of finished tasks vs total tasks (e.g. "Good job! I see you have completed 10 out of 20 sub-tasks..."). Make it sound warm and personalized.
+2. **Progress Analysis & Coaching Insights**:
+   - If they are completing tasks on time: Provide positive reinforcement, point out what they are doing right, and encourage them to keep the momentum.
+   - If they are lagging or have overdue tasks (sub-tasks with deadlines before today ${currentDate} that are not completed): Give constructive insights into *why* they might be struggling with these particular tasks, and suggest adjustments (e.g., break them down further, slow productivity principles).
+3. **Next Actions**: Provide 3 clear, actionable next steps they should take today or this week to stay on track.
+4. **General Advice**: An encouraging closing tip tailored to their persona interests and work role.
+
+Format your response in clean, premium Markdown (using emojis, bold text, and bullet points). Keep the tone encouraging, empathetic, yet highly professional.`;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://taskstack.vercel.app",
+                "X-Title": "TaskStack"
+            },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [
+                    { role: "system", content: "You are a senior executive performance coach. You provide motivating, hyper-personalized progress assessments." },
+                    { role: "user", content: prompt }
+                ]
+            }),
+        });
+
+        const data = await response.json();
+        if (data.error || !data.choices?.[0]?.message?.content) {
+            console.error("[AI-Service] Coach review generation failure:", data.error || "No content returned");
+            throw new Error("Failed to generate coach feedback.");
+        }
+
+        return data.choices[0].message.content;
+    } catch (error) {
+        console.error("[AI-Service] Coach review failure:", error);
+        throw error;
+    }
+}

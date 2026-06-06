@@ -320,10 +320,6 @@ export function AppOnboarding() {
                     )}
                   </button>
                 </div>
-
-                <p className="text-[10px] text-muted-foreground/40 font-bold uppercase tracking-widest pt-2">
-                  Your data is NOT shared with anyone but you.
-                </p>
               </div>
             </div>
           </motion.div>

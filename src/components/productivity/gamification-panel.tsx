@@ -13,7 +13,6 @@ import {
   Trophy,
   Flame,
   TrendingUp,
-  Sparkles,
   Award,
   Crown,
   Target,
@@ -25,7 +24,6 @@ import { cn } from "@/lib/utils";
 import { useProductivity } from "@/context/productivity-context";
 import {
   ACHIEVEMENTS,
-  LEVELS,
 } from "@/services/gamification-config";
 import {
   type UserGamification,
@@ -36,6 +34,7 @@ import {
 } from "@/services/gamification-service";
 import { useXPToast } from "./xp-toast";
 import { LevelBadge } from "./level-badge";
+import { LevelJourney } from "./level-journey";
 
 export const gamificationPanelSchema = z.object({
   showLeaderboard: z.boolean().default(false).describe("Show the global leaderboard section"),
@@ -225,44 +224,8 @@ export function GamificationPanel({
         />
       </div>
 
-      {/* Level Roadmap */}
-      <div className="bg-card/40 backdrop-blur-xl rounded-3xl p-6 border border-border/50">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-5 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          Level Roadmap
-        </h3>
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
-          {LEVELS.map((lvl) => {
-            const reached = stats.totalXP >= lvl.threshold;
-            const isCurrent = lvl.level === stats.level.level;
-            return (
-              <div
-                key={lvl.level}
-                className={cn(
-                  "flex flex-col items-center min-w-[80px] p-3 rounded-2xl border transition-all",
-                  isCurrent
-                    ? "bg-primary/15 border-primary/50 scale-105 shadow-lg shadow-primary/20"
-                    : reached
-                    ? "bg-card/60 border-border/50"
-                    : "bg-muted/20 border-border/30 opacity-50"
-                )}
-                title={lvl.blurb}
-              >
-                <div className="text-2xl mb-1">{lvl.emoji}</div>
-                <div className="text-[9px] font-black uppercase tracking-wider text-foreground text-center leading-tight mb-0.5">
-                  L{lvl.level}
-                </div>
-                <div className="text-[9px] font-bold text-muted-foreground text-center leading-tight">
-                  {lvl.title.split(" ").slice(0, 2).join(" ")}
-                </div>
-                {isCurrent && (
-                  <div className="text-[8px] font-black text-primary mt-1">YOU</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Level Journey — full timeline */}
+      <LevelJourney totalXP={stats.totalXP} streak={stats.streak} />
 
       {/* Achievements */}
       {showAchievements && (

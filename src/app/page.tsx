@@ -38,7 +38,9 @@ import {
   XIcon,
   Moon,
   Sun,
-  Loader2
+  Loader2,
+  Crown,
+  Mountain
 } from "lucide-react";
 
 // Creative tool imports
@@ -51,6 +53,7 @@ import { StyledWeeklyReview } from "@/components/productivity/creative/weekly-re
 import { Onboarding } from "@/components/auth/onboarding";
 import { ProfileMenu } from "@/components/auth/profile-menu";
 import { QuickSearch } from "@/components/productivity/quick-search";
+import { JourneyView } from "@/components/productivity/journey-view";
 import { RecoveryTools } from "@/components/productivity/recovery-tools";
 import { AppOnboarding } from "@/components/ui/app-onboarding";
 
@@ -128,6 +131,7 @@ function HomeContent() {
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: "journey", label: "Level Journey", icon: <Crown className="w-4 h-4" /> },
     { id: "pomodoro", label: "Pomodoro", icon: <Timer className="w-4 h-4" /> },
     { id: "skills", label: "Skills Track", icon: <CheckSquare className="w-4 h-4" /> },
     { id: "links", label: "Links", icon: <LinkIcon className="w-4 h-4" /> },
@@ -150,6 +154,7 @@ function HomeContent() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border flex items-center justify-around h-16 px-2 safe-area-bottom">
         {[
           { id: "dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Home" },
+          { id: "journey", icon: <Crown className="w-5 h-5" />, label: "Level" },
           { id: "pomodoro", icon: <Timer className="w-5 h-5" />, label: "Focus" },
           { id: "skills", icon: <CheckSquare className="w-5 h-5" />, label: "Skills" },
           { id: "links", icon: <LinkIcon className="w-5 h-5" />, label: "Links" },
@@ -285,12 +290,12 @@ function HomeContent() {
       </aside>
 
       {/* Main Content */}
-      <main 
+      <main
         id="main-scroll"
         className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
-        isChatOpen ? "xl:mr-[400px]" : "mr-0"
-      )}>
+          "flex-1 overflow-y-auto overflow-x-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
+          isChatOpen ? "xl:mr-[400px]" : "mr-0"
+        )}>
         <header className="h-16 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -310,7 +315,7 @@ function HomeContent() {
 
           <div className="flex items-center gap-4">
             {currentEnergy !== null && (
-            <div className={cn(
+              <div className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-700",
                 isLowEnergy
                   ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse"
@@ -340,6 +345,9 @@ function HomeContent() {
         >
           {activeView === "dashboard" && (
             isLowEnergy ? <RecoveryTools /> : <ProductivityDashboard />
+          )}
+          {activeView === "journey" && (
+            <JourneyView />
           )}
           {activeView === "pomodoro" && (
             <div className="py-12 flex items-center justify-center">
@@ -406,7 +414,7 @@ function HomeContent() {
               <div className="text-sm font-medium text-muted-foreground mb-10 leading-relaxed px-2">
                 {confirmState.message}
               </div>
-              
+
               <div className="flex flex-col gap-3">
                 <button
                   onClick={async () => {
@@ -415,8 +423,8 @@ function HomeContent() {
                   }}
                   className={cn(
                     "w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] transition-all shadow-2xl active:scale-[0.98] outline-none",
-                    confirmState.type === "danger" 
-                      ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20" 
+                    confirmState.type === "danger"
+                      ? "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20"
                       : "bg-foreground hover:bg-foreground/90 text-background shadow-foreground/10"
                   )}
                 >

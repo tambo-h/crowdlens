@@ -46,7 +46,7 @@ export function ProductivityDashboard({
   userName: initialUserName,
   ...initialStats
 }: ProductivityDashboardProps) {
-  const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger, googleProfile, persona } = useProductivity();
+  const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger, googleProfile, persona, setActiveView } = useProductivity();
   const [stats, setStats] = useState<any>(null);
   const [gamification, setGamification] = useState<UserGamification | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -161,6 +161,7 @@ export function ProductivityDashboard({
                     progressPercent={gamification.progressPercent}
                     streak={gamification.streak}
                     compact
+                    onViewJourney={() => setActiveView("journey")}
                   />
                 </div>
               )}

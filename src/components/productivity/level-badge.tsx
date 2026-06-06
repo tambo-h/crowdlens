@@ -6,7 +6,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, TrendingUp, Flame } from "lucide-react";
+import { Zap, TrendingUp, Flame, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -22,6 +22,8 @@ export interface LevelBadgeProps {
   streak: number;
   compact?: boolean;
   className?: string;
+  /** If provided, shows a "View Journey" CTA that calls this on click. */
+  onViewJourney?: () => void;
 }
 
 export function LevelBadge({
@@ -36,6 +38,7 @@ export function LevelBadge({
   streak,
   compact = false,
   className,
+  onViewJourney,
 }: LevelBadgeProps) {
   const [pop, setPop] = useState(false);
   const [prevLevel, setPrevLevel] = useState(level);
@@ -141,6 +144,16 @@ export function LevelBadge({
           )}
         </div>
       </div>
+
+      {onViewJourney && (
+        <button
+          onClick={onViewJourney}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary hover:text-accent transition-colors py-1.5 rounded-xl hover:bg-primary/5"
+        >
+          View full journey
+          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      )}
     </motion.div>
   );
 }

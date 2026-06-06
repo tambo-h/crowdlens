@@ -7,7 +7,7 @@ import { useProductivity } from "@/context/productivity-context";
 import { cn } from "@/lib/utils";
 
 export function ProfileMenu() {
-    const { userId, setUserId, googleProfile, isGoogleUser, googleLogout } = useProductivity();
+    const { userId, setUserId, googleProfile, isGoogleUser, googleLogout, setIsOnboardingOpen } = useProductivity();
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -141,6 +141,17 @@ export function ProfileMenu() {
                                         </p>
                                     </div>
                                 )}
+
+                                 <button
+                                    onClick={() => {
+                                        setIsOnboardingOpen(true);
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-all group"
+                                >
+                                    <User className="w-4 h-4 group-hover:scale-110 transition-transform text-emerald-400" />
+                                    Edit Persona
+                                </button>
 
                                 <button
                                     onClick={logout}

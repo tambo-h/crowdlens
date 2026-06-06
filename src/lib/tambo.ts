@@ -280,7 +280,8 @@ CRITICAL RULES:
 1. Call this tool IMMEDIATELY when the user mentions any skill, goal, language, or workspace topic.
 2. NEVER ask follow-up questions before calling this tool. Just infer what you need.
 3. If experienceLevel is not stated, use 'beginner'. If projectType is unclear, leave it empty.
-4. A user saying 'setup workspace for X' or 'learn X' or 'I want to do X' is enough to call this tool.`,
+4. A user saying 'setup workspace for X' or 'learn X' or 'I want to do X' is enough to call this tool.
+5. In your response to the user, you MUST tell them that you have created these set of skills for them to achieve their goal.`,
     tool: setupPersonalizedWorkspace as any,
     inputSchema: z.object({
       userId: z.string().optional(),

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, saveChallenge as saveChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence } from "@/services/productivity-service";
+import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, saveChallenge as saveChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence, UserPersona } from "@/services/productivity-service";
 
 export interface GoogleProfile {
     name: string;
@@ -95,6 +95,12 @@ interface ProductivityContextType {
     };
     openConfirm: (config: { title: string, message: string | React.ReactNode, onConfirm: () => void | Promise<void>, confirmText?: string, type?: "danger" | "info" }) => void;
     closeConfirm: () => void;
+
+    // Persona / Onboarding
+    persona: UserPersona | null;
+    savePersona: (persona: UserPersona) => Promise<void>;
+    isOnboardingOpen: boolean;
+    setIsOnboardingOpen: (open: boolean) => void;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -119,6 +125,49 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [trackDeadlines, setTrackDeadlines] = useState<Record<string, string>>({});
     const [isProcessingAI, setIsProcessingAI] = useState(false);
     const [lastSetupRole, setLastSetupRole] = useState<string | null>(null);
+
+    // Onboarding / Persona state
+    const [persona, setPersona] = useState<UserPersona | null>(null);
+    const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+    useEffect(() => {
+        if (userId) {
+            import("@/services/productivity-service")
+                .then(m => m.getUserPersona(userId))
+                .then(p => {
+                    if (p) setPersona(p);
+                })
+                .catch(err => console.error("Failed to load persona", err));
+        } else {
+            setPersona(null);
+        }
+    }, [userId]);
+
+    const handleSavePersona = async (newPersona: UserPersona) => {
+        if (!userId) return;
+        setIsProcessingAI(true);
+        try {
+            const { saveUserPersona, setupPersonalizedWorkspace, getChallenges } = await import("@/services/productivity-service");
+            await saveUserPersona(userId, newPersona);
+            setPersona(newPersona);
+
+            // Create 1 dynamic skills track if not already present
+            const currentChallenges = await getChallenges(userId);
+            const hasPersonalGrowth = currentChallenges.some(c => c.role === "Personal Growth");
+            if (!hasPersonalGrowth) {
+                const res = await setupPersonalizedWorkspace(userId, { skill: "Personal Growth" });
+                if (res?.success) {
+                    setLastSetupRole("Personal Growth");
+                }
+            }
+            await refreshChallenges(true);
+            triggerCreativeRefresh();
+        } catch (error) {
+            console.error("Failed to save persona:", error);
+        } finally {
+            setIsProcessingAI(false);
+        }
+    };
 
     // Computed
     const isGoogleUser = (userId ?? "").startsWith("go_");
@@ -480,7 +529,9 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
             trackDeadlines, setTrackDeadline: handleSetTrackDeadline,
             confirmState, openConfirm, closeConfirm,
             isProcessingAI, setIsProcessingAI,
-            lastSetupRole, setLastSetupRole
+            lastSetupRole, setLastSetupRole,
+            persona, savePersona: handleSavePersona,
+            isOnboardingOpen, setIsOnboardingOpen
         }}>
             {children}
         </ProductivityContext.Provider>

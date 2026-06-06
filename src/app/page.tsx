@@ -114,12 +114,7 @@ function HomeContent() {
     return () => clearTimeout(scrollTimeout);
   }, [lastSetupRole, setActiveView, setLastSetupRole]);
 
-  // Auto-open chat for new users to guide onboarding
-  React.useEffect(() => {
-    if (userId && challenges.length === 0 && !isChatOpen) {
-      setIsChatOpen(true);
-    }
-  }, [userId, challenges.length, setIsChatOpen, isChatOpen]);
+
 
   if (!userId) {
     return <Onboarding />;

@@ -21,7 +21,8 @@ export async function expandChallenge(userId: string, challengeId: string): Prom
 
   // 1. Generate details via AI
   const currentDate = new Date().toISOString().split('T')[0];
-  const expansion = await generateChallengeDetails(challenge.title, challenge.role, currentDate, challenge.deadline);
+  const persona = await getUserPersona(userId);
+  const expansion = await generateChallengeDetails(challenge.title, challenge.role, currentDate, challenge.deadline, persona);
 
   // 2. Map steps — filter out any with empty/null titles (AI can sometimes return blank entries)
   const steps = expansion.steps
@@ -615,11 +616,13 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
 
   console.log("[Productivity-Service] Starting automated AI setup for skill:", actualInput.skill, "Level:", actualInput.experienceLevel);
   try {
+    const persona = await getUserPersona(actualUserId);
     const generated = await generatePersonalizedData(
       actualInput.skill,
       actualInput.experienceLevel,
       actualInput.projectType,
-      new Date().toISOString().split('T')[0]
+      new Date().toISOString().split('T')[0],
+      persona
     );
 
     // 1. Increment Rate Limit
@@ -652,7 +655,7 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
 
     return {
       success: true,
-      message: `### ✨ Workspace Optimized!\n\nI've automatically configured your workspace for **${actualInput.skill}**. Your new growth tracks and resources are now live and synced across your OS.`,
+      message: `### ✨ Workspace Optimized!\n\nI have created these set of skills for you to achieve your goal: **${actualInput.skill}**. Your new growth tracks and resources are now live and synced across your OS.`,
       interactive: {
         name: "WorkspacePreview",
         props: {
@@ -713,4 +716,33 @@ export async function seedProductivityData(userId: string) {
   await redis.del(keys.practiced_rules);
 
   return { success: true };
+}
+
+export interface UserPersona {
+  age?: string;
+  gender?: string;
+  city?: string;
+  workDesignation?: string;
+  interests?: string;
+  name?: string;
+}
+
+export async function getUserPersona(userId: string): Promise<UserPersona | null> {
+  try {
+    const persona = await redis.get<UserPersona>(`persona:${userId}`);
+    return persona;
+  } catch (error) {
+    console.error("[Service] Error in getUserPersona:", error);
+    return null;
+  }
+}
+
+export async function saveUserPersona(userId: string, persona: UserPersona): Promise<any> {
+  try {
+    await redis.set(`persona:${userId}`, persona);
+    return { success: true, persona };
+  } catch (error) {
+    console.error("[Service] Error in saveUserPersona:", error);
+    throw error;
+  }
 }

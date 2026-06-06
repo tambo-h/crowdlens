@@ -43,7 +43,7 @@ export function ProductivityDashboard({
   userName: initialUserName,
   ...initialStats
 }: ProductivityDashboardProps) {
-  const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger } = useProductivity();
+  const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger, googleProfile, persona } = useProductivity();
   const [stats, setStats] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -74,12 +74,13 @@ export function ProductivityDashboard({
   };
 
   const {
-    userName = initialUserName || "User",
     pomodoroSessionsToday,
     challengesCompletedToday,
     totalChallenges,
     currentStreak,
   } = dashboardData;
+
+  const userName = googleProfile?.name || persona?.name || dashboardData.userName || initialUserName || "User";
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -352,34 +353,7 @@ export function ProductivityDashboard({
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             {/* PIN Card */}
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden group">
-              <div className="absolute -bottom-10 -right-10 opacity-20 group-hover:scale-110 transition-transform duration-1000">
-                <ShieldCheck className="w-48 h-48 text-white" />
-              </div>
-              <div className="relative z-10 flex flex-col h-full">
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-3">
-                  <ShieldCheck className="w-6 h-6 text-indigo-300" />
-                  Workspace Encryption
-                </h3>
-                <p className="text-indigo-100/70 text-sm mb-8 max-w-[80%] leading-relaxed">
-                  Your local-first data is encrypted. Use this unique PIN to sync your workspace across devices.
-                </p>
-                <div className="mt-auto flex items-center justify-between p-5 bg-black/20 backdrop-blur-md rounded-2xl border border-white/5">
-                  <span className="text-xl sm:text-3xl font-black tracking-[0.3em] sm:tracking-[0.4em] text-white">
-                    {userId?.replace("up_", "") || "000000"}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const pin = userId?.replace("up_", "") || "000000";
-                      navigator.clipboard.writeText(pin);
-                    }}
-                    className="px-6 py-2.5 bg-white text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 active:scale-95 transition-all shadow-xl"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            </div>
+
 
             {/* Quick Guides */}
             <div className="bg-card rounded-[2rem] p-8 border border-border shadow-xl">

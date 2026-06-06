@@ -499,7 +499,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
                 }
 
                 if (userId && isWork) {
-                    void startPomodoroService(userId).catch(() => {});
+                    void startPomodoroService(userId, { completed: true }).catch(() => {});
                 }
 
                 // Add to history in localStorage if in browser

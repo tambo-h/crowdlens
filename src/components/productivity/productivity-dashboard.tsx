@@ -34,10 +34,13 @@ type ProductivityDashboardProps = z.input<typeof productivityDashboardSchema>;
 import { useProductivity } from "@/context/productivity-context";
 import { useEffect, useState } from "react";
 import { getProductivityDashboard } from "@/services/productivity-service";
+import { getUserStats } from "@/services/gamification-service";
+import type { UserGamification } from "@/services/gamification-service";
 import { motion } from "framer-motion";
-import { ShieldCheck, Sparkles, ArrowRight, TrendingUp, Zap, Target, Clock, LifeBuoy, Info } from "lucide-react";
+import { ShieldCheck, Sparkles, ArrowRight, TrendingUp, Zap, Target, Clock, LifeBuoy, Info, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ContextHelp } from "@/components/ui/context-help";
+import { LevelBadge } from "@/components/productivity/level-badge";
 
 export function ProductivityDashboard({
   userName: initialUserName,
@@ -45,6 +48,7 @@ export function ProductivityDashboard({
 }: ProductivityDashboardProps) {
   const { pomodoro, challenges, userId, currentEnergy, creativeRefreshTrigger, googleProfile, persona } = useProductivity();
   const [stats, setStats] = useState<any>(null);
+  const [gamification, setGamification] = useState<UserGamification | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export function ProductivityDashboard({
   useEffect(() => {
     if (!userId) return;
     getProductivityDashboard(userId).then(setStats);
+    getUserStats(userId).then(setGamification);
   }, [userId, creativeRefreshTrigger]);
 
   const getGreeting = () => {
@@ -143,6 +148,22 @@ export function ProductivityDashboard({
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 Growth Mode: Active
               </div>
+              {gamification && (
+                <div className="w-full md:w-80">
+                  <LevelBadge
+                    level={gamification.level.level}
+                    title={gamification.level.title}
+                    emoji={gamification.level.emoji}
+                    totalXP={gamification.totalXP}
+                    xpInCurrentLevel={gamification.xpInCurrentLevel}
+                    xpForNextLevel={gamification.xpForNextLevel}
+                    xpToNextLevel={gamification.xpToNextLevel}
+                    progressPercent={gamification.progressPercent}
+                    streak={gamification.streak}
+                    compact
+                  />
+                </div>
+              )}
               {userId && (
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-1">
                   ID: {userId.replace("up_", "")}

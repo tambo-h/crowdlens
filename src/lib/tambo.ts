@@ -20,6 +20,7 @@ import { InspirationQuote, inspirationQuoteSchema } from "@/components/productiv
 import { ProductivityDashboard, productivityDashboardSchema } from "@/components/productivity/productivity-dashboard";
 import { LinkCard, linkCardSchema } from "@/components/productivity/link-card";
 import { ProductivityRules, productivityRulesSchema } from "@/components/productivity/productivity-rules";
+import { GamificationPanel, gamificationPanelSchema } from "@/components/productivity/gamification-panel";
 
 // Creative Tools Components
 import { StyledDistractionJournal, distractionJournalSchema } from "@/components/productivity/creative/distraction-journal/styled-journal";
@@ -68,6 +69,7 @@ import {
   deleteChallengeStep,
 } from "@/services/productivity-service";
 import { generatePersonalizedData, generateChallengeDetails } from "@/services/ai-service";
+import { getUserStats, getGlobalLeaderboard } from "@/services/gamification-service";
 
 export const tools: TamboTool[] = [
   {
@@ -313,6 +315,30 @@ CRITICAL RULES:
     inputSchema: z.object({ challengeId: z.string(), stepId: z.string() }),
     outputSchema: z.any(),
   },
+  // Gamification
+  {
+    name: "getGamificationStats",
+    description: "Get the user's current level, XP, streak, achievements, and recent XP activity. Use this whenever the user asks about their progress, level, XP, rank, or gamification status.",
+    tool: getUserStats as any,
+    inputSchema: z.object({ userId: z.string().optional() }),
+    outputSchema: z.object({
+      totalXP: z.number(),
+      level: z.object({ level: z.number(), title: z.string(), emoji: z.string() }),
+      nextLevel: z.object({ level: z.number(), title: z.string(), emoji: z.string() }).nullable(),
+      xpToNextLevel: z.number(),
+      progressPercent: z.number(),
+      streak: z.number(),
+      achievements: z.array(z.any()),
+      recentEvents: z.array(z.any()),
+    }),
+  },
+  {
+    name: "getGlobalLeaderboard",
+    description: "Get the top users by XP across the productivity OS.",
+    tool: getGlobalLeaderboard as any,
+    inputSchema: z.object({ limit: z.number().optional() }),
+    outputSchema: z.array(z.object({ userId: z.string(), xp: z.number(), level: z.number(), title: z.string(), emoji: z.string() })),
+  },
 ];
 
 export const components: TamboComponent[] = [
@@ -387,5 +413,11 @@ export const components: TamboComponent[] = [
     description: "Visual preview of generated skills and resources for a workspace setup.",
     component: InteractableWorkspacePreview,
     propsSchema: workspacePreviewSchema,
+  },
+  {
+    name: "GamificationPanel",
+    description: "Displays the user's level, XP progress, streak, achievements, recent activity, and (optionally) the global leaderboard. Use when the user wants to see their gamification status, level up, achievements, or XP.",
+    component: GamificationPanel,
+    propsSchema: gamificationPanelSchema,
   },
 ];

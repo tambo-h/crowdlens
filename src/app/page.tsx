@@ -14,6 +14,9 @@ import { ChatSidePanel } from "@/components/tambo/chat-side-panel";
 import { ProductivityProvider, useProductivity } from "@/context/productivity-context";
 import { components, tools } from "@/lib/tambo";
 import { TamboProvider } from "@tambo-ai/react";
+import { XPToastProvider } from "@/components/productivity/xp-toast";
+import { LevelBadge } from "@/components/productivity/level-badge";
+import { getUserStats } from "@/services/gamification-service";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -450,7 +453,8 @@ const TamboProviderWithContext = () => {
       "saveSnippet", "getSnippets", "updateSnippet", "deleteSnippet", "saveStandupEntry",
       "logEnergyLevel", "getEnergyData", "saveWeeklyReview", "getWeeklyReviews",
       "togglePracticedRule", "saveQuote", "updateQuote", "deleteQuote",
-      "seedProductivityData", "setupPersonalizedWorkspace", "generateChallengeDetails"
+      "seedProductivityData", "setupPersonalizedWorkspace", "generateChallengeDetails",
+      "getGamificationStats", "getGlobalLeaderboard"
     ];
 
     if (userIdTools.includes(t.name)) {
@@ -488,11 +492,13 @@ const TamboProviderWithContext = () => {
       tools={augmentedTools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
     >
-      {/* App dims slightly and loses interactivity while AI works — overlay handles the visual */}
-      <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-60 select-none")}>
-        <HomeContent />
-      </div>
-      <GlobalLoadingOverlay isProcessingAI={isProcessingAI} />
+      <XPToastProvider>
+        {/* App dims slightly and loses interactivity while AI works — overlay handles the visual */}
+        <div className={cn("transition-all duration-300", isProcessingAI && "pointer-events-none opacity-60 select-none")}>
+          <HomeContent />
+        </div>
+        <GlobalLoadingOverlay isProcessingAI={isProcessingAI} />
+      </XPToastProvider>
     </TamboProvider>
   );
 };

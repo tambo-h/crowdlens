@@ -9,6 +9,20 @@ import { redis } from "@/lib/upstash";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { generatePersonalizedData, generateChallengeDetails, generateTrackCoachReview } from "./ai-service";
+import { awardXP, syncLeaderboard } from "./gamification-service";
+import type { XPAction } from "./gamification-config";
+
+/**
+ * Fire-and-forget XP award. Never throws.
+ */
+function safeAwardXP(userId: string, action: XPAction, meta?: Record<string, any>) {
+  if (!userId) return;
+  void awardXP({ userId, action, meta })
+    .then((evt) => {
+      if (evt) void syncLeaderboard(userId);
+    })
+    .catch((err) => console.error("[XP] award failed", action, err));
+}
 
 /**
  * Expand a challenge using AI to generate steps and resources
@@ -165,24 +179,41 @@ export async function getChallenges(userId: string, input: { role?: string } = {
 export async function toggleChallenge(userId: string, input: { challengeId: string, completed?: boolean, stepId?: string }): Promise<any> {
   const keys = getKeys(userId);
   const challenges = await getChallenges(userId);
+  let awardAction: XPAction | null = null;
+  let awardMeta: Record<string, any> | undefined;
   const updated = challenges.map(c => {
     if (c.id === input.challengeId) {
       if (input.stepId) {
+        const wasCompleted = c.steps.find(s => s.id === input.stepId)?.completed;
         const updatedSteps = c.steps.map(s => s.id === input.stepId ? { ...s, completed: !s.completed } : s);
         const allDone = updatedSteps.every(s => s.completed);
+        if (!wasCompleted) {
+          awardAction = "challenge_step_complete";
+          awardMeta = { challengeId: c.id, stepId: input.stepId, role: c.role };
+        }
+        if (allDone && !c.completed) {
+          awardAction = "challenge_complete";
+          awardMeta = { challengeId: c.id, role: c.role };
+        }
         return { ...c, steps: updatedSteps, completed: allDone, completedAt: allDone ? new Date().toISOString() : undefined };
+      }
+      const newCompleted = input.completed ?? !c.completed;
+      if (newCompleted && !c.completed) {
+        awardAction = "challenge_complete";
+        awardMeta = { challengeId: c.id, role: c.role };
       }
       return {
         ...c,
-        completed: input.completed ?? !c.completed,
-        completedAt: (input.completed ?? !c.completed) ? new Date().toISOString() : undefined,
-        steps: c.steps.map(s => ({ ...s, completed: input.completed ?? !c.completed }))
+        completed: newCompleted,
+        completedAt: newCompleted ? new Date().toISOString() : undefined,
+        steps: c.steps.map(s => ({ ...s, completed: newCompleted }))
       };
     }
     return c;
   });
 
   await redis.set(keys.skills, updated);
+  if (awardAction) safeAwardXP(userId, awardAction, awardMeta);
   revalidatePath("/");
   return { success: true };
 }
@@ -377,6 +408,7 @@ export async function saveLink(userId: string, input: { url: string, title: stri
   const links = await redis.get<any[]>(keys.links) || [];
   const newLink = { ...input, id: `l_${Date.now()}`, savedAt: new Date().toISOString() };
   await redis.set(keys.links, [newLink, ...links]);
+  safeAwardXP(userId, "link_saved", { title: input.title });
   revalidatePath("/");
   return newLink;
 }
@@ -447,6 +479,7 @@ export async function saveQuote(userId: string, input: { text: string, author: s
   const customQuotes = await redis.get<any[]>(keys.quotes) || [];
   const newQuote = { ...input, id: `q_${Date.now()}` };
   await redis.set(keys.quotes, [newQuote, ...customQuotes]);
+  safeAwardXP(userId, "quote_saved", { author: input.author });
   return newQuote;
 }
 
@@ -469,6 +502,13 @@ export async function deleteQuote(userId: string, quoteId: string) {
 export async function startPomodoroSession(userId: string, input: any = {}) {
   const keys = getKeys(userId);
   await redis.incr(`${keys.pomodoro}:today`);
+  // input.completed === true is set by the client when a full work session
+  // finishes (rather than just being kicked off).
+  if (input?.completed) {
+    safeAwardXP(userId, "pomodoro_complete", { projectName: input.projectName });
+  } else {
+    safeAwardXP(userId, "pomodoro_start", { projectName: input.projectName });
+  }
   return { success: true };
 }
 
@@ -477,6 +517,7 @@ export async function logDistraction(userId: string, input: { description: strin
   const items = await redis.get<any[]>(keys.distractions) || [];
   const newItem = { ...input, id: `d_${Date.now()}`, timestamp: new Date().toISOString() };
   await redis.set(keys.distractions, [newItem, ...items]);
+  safeAwardXP(userId, "distraction_logged", { category: input.category });
   return newItem;
 }
 
@@ -490,6 +531,7 @@ export async function saveSnippet(userId: string, input: { title: string, code: 
   const items = await redis.get<any[]>(keys.snippets) || [];
   const newItem = { ...input, id: `s_${Date.now()}`, savedAt: new Date().toISOString() };
   await redis.set(keys.snippets, [newItem, ...items]);
+  safeAwardXP(userId, "snippet_saved", { title: input.title, language: input.language });
   return newItem;
 }
 
@@ -519,6 +561,7 @@ export async function saveStandupEntry(userId: string, input: { today: string, y
   const items = await redis.get<any[]>(keys.standup) || [];
   const newItem = { ...input, id: `st_${Date.now()}`, date: new Date().toISOString() };
   await redis.set(keys.standup, [newItem, ...items]);
+  safeAwardXP(userId, "standup_logged");
   return newItem;
 }
 
@@ -533,6 +576,7 @@ export async function logEnergyLevel(userId: string, input: { level: number, not
   const items = await redis.get<any[]>(keys.energy) || [];
   const newItem = { ...actualInput, id: `e_${Date.now()}`, timestamp: new Date().toISOString() };
   await redis.set(keys.energy, [newItem, ...items]);
+  safeAwardXP(actualUserId, "energy_logged", { level: actualInput.level });
   return newItem;
 }
 
@@ -547,6 +591,7 @@ export async function saveWeeklyReview(userId: string, input: { accomplishments:
   const items = await redis.get<any[]>(keys.review) || [];
   const newItem = { ...input, id: `w_${Date.now()}`, date: new Date().toISOString() };
   await redis.set(keys.review, [newItem, ...items]);
+  safeAwardXP(userId, "weekly_review", { rating: input.rating });
   return newItem;
 }
 
@@ -569,6 +614,7 @@ export async function togglePracticedRule(userId: string, input: { ruleId: numbe
     : [...practiced, input.ruleId];
 
   await redis.set(keys.practiced_rules, updated);
+  if (!isPracticed) safeAwardXP(userId, "rule_practiced", { ruleId: input.ruleId });
   return { success: true, practiced: updated };
 }
 
@@ -667,6 +713,9 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
       deadlines[actualInput.skill] = generated.trackDeadline;
       await redis.set(keys.track_deadline, deadlines);
     }
+
+    // 5. Award XP for setting up a new track
+    safeAwardXP(actualUserId, "track_setup", { skill: actualInput.skill });
 
     revalidatePath("/");
     return {

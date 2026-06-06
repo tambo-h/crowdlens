@@ -36,7 +36,7 @@ interface ProductivityContextType {
     expandingIds: string[];
     refreshChallenges: (background?: boolean) => Promise<void>;
     saveChallenge: (challenge: Omit<Challenge, "id">) => Promise<void>;
-    toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<void>;
+    toggleChallenge: (challengeId: string, completed?: boolean, stepId?: string) => Promise<any>;
     updateChallenge?: (id: string, updates: any) => Promise<void>;
     deleteChallenge?: (id: string) => Promise<void>;
     deleteRoleTrack?: (role: string) => Promise<void>;
@@ -383,10 +383,12 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         }
 
         try {
-            await toggleChallengeService(userId, { challengeId, completed, stepId });
+            const res = await toggleChallengeService(userId, { challengeId, completed, stepId });
+            return res;
         } catch (err) {
             console.error("Failed to toggle challenge", err);
             refreshChallenges(); // Rollback
+            return null;
         }
     };
 

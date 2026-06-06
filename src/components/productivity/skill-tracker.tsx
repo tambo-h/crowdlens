@@ -10,10 +10,13 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { withInteractable } from "@tambo-ai/react";
 import { useProductivity } from "@/context/productivity-context";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, RotateCcw, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink, Plus, BookOpen, Sparkles, RotateCcw, Trash2, Edit2, X, Check, AlertOctagon, Calendar, Clock, AlertCircle, Info, Flame } from "lucide-react";
 import { ContextHelp } from "@/components/ui/context-help";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { useXPToast } from "./xp-toast";
+import { useNudgeManager } from "./nudge-manager";
+import { findLevelUp } from "@/services/nudges-config";
 
 export const skillTrackerSchema = z.object({
   challenges: z.array(
@@ -59,10 +62,91 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
     collapsedRoles,
     setCollapsedRoles,
     openConfirm,
-    closeConfirm
+    closeConfirm,
+    creativeRefreshTrigger: _crt,
+    triggerCreativeRefresh,
   } = useProductivity();
+  const { showXP, showFloatingXP, showNudge } = useXPToast();
+  const nudgeMgr = useNudgeManager();
   const [isAddingInRole, setIsAddingInRole] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+
+  const handleToggleWithFeedback = async (
+    e: React.MouseEvent | React.ChangeEvent,
+    challengeId: string,
+    completed?: boolean,
+    stepId?: string
+  ) => {
+    // Capture click coordinates for the floating "+XP" feedback
+    let point: { x: number; y: number } | null = null;
+    if ("clientX" in e && typeof e.clientX === "number") {
+      point = { x: e.clientX, y: e.clientY };
+    } else if (e.currentTarget instanceof HTMLElement) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+
+    const res: any = await toggleChallenge(challengeId, completed, stepId);
+    if (!res?.xp) return;
+
+    const { event, newAchievements, level, leveledUp } = res.xp;
+    // Only emit feedback when the user actually gained XP (un-completing a step awards nothing)
+    if (!event || event.totalXP <= 0) return;
+
+    // 1. Floating "+XP" near the click
+    if (point) {
+      showFloatingXP({
+        amount: event.totalXP,
+        multiplier: event.multiplier,
+        x: point.x,
+        y: point.y,
+      });
+    }
+
+    // 2. Bottom-right XP toast (small)
+    showXP({ amount: event.totalXP, multiplier: event.multiplier, label: event.label });
+
+    // 3. Level-up celebration
+    if (leveledUp) {
+      showXP({
+        levelUp: { level: level.level, title: level.title, emoji: level.emoji },
+        amount: 0,
+        label: `Level ${level.level}`,
+      });
+      const lu = findLevelUp();
+      showNudge({
+        emoji: lu.emoji,
+        message: lu.message,
+        variant: lu.variant,
+        sub: `You are now a ${level.title}.`,
+      });
+    }
+
+    // 4. Achievement unlocks
+    for (const a of newAchievements || []) {
+      showXP({
+        achievement: { id: a.id, title: a.title, emoji: a.emoji, bonus: a.bonus },
+        amount: a.bonus,
+        label: a.description,
+      });
+    }
+
+    // 5. Milestone / combo / variety / generic nudges
+    nudgeMgr.onXP({
+      action: event.action,
+      amount: event.totalXP,
+      multiplier: event.multiplier,
+      label: event.label,
+      levelUp: leveledUp ? { level: level.level, title: level.title, emoji: level.emoji } : undefined,
+      achievement: newAchievements?.[0]
+        ? { id: newAchievements[0].id, title: newAchievements[0].title, emoji: newAchievements[0].emoji, bonus: newAchievements[0].bonus }
+        : undefined,
+      meta: event.meta,
+    });
+
+    // 6. Refresh dashboard stats so the LevelBadge in the header updates immediately
+    triggerCreativeRefresh();
+  };
 
   const [coachFeedbacks, setCoachFeedbacks] = useState<Record<string, string>>({});
   const [loadingFeedbackRoles, setLoadingFeedbackRoles] = useState<string[]>([]);
@@ -369,13 +453,14 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
         <div>
           <h2 className="text-2xl font-black tracking-tighter text-foreground flex items-center gap-2">
              Skill Track
-             <ContextHelp 
-               title="What is a Skill Track?" 
-               description="Your AI-generated growth roadmap. It breaks down complex roles into manageable milestones and concrete action steps." 
+             <ContextHelp
+               title="What is a Skill Track?"
+               description="Your AI-generated growth roadmap. It breaks down complex roles into manageable milestones and concrete action steps."
              />
           </h2>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em]">{today}</p>
         </div>
+        <SessionPulse count={nudgeMgr.taskCount} />
       </div>
 
       {sortedRoles.length === 0 ? (
@@ -521,7 +606,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                             <div className="p-4 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-4 flex-1">
                                 <button
-                                  onClick={() => toggleChallenge(challenge.id, !challenge.completed)}
+                                  onClick={(e) => handleToggleWithFeedback(e, challenge.id, !challenge.completed)}
                                   className={`flex-shrink-0 transition-all duration-300 transform active:scale-75 ${challenge.completed ? "text-primary shadow-lg shadow-primary/20" : "text-border hover:text-primary"}`}
                                 >
                                   {challenge.completed ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
@@ -773,7 +858,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                             >
                                               <div
                                                 className="flex items-center gap-3 cursor-pointer flex-1"
-                                                onClick={() => toggleChallenge(challenge.id, undefined, step.id)}
+                                                onClick={(e) => handleToggleWithFeedback(e, challenge.id, undefined, step.id)}
                                               >
                                                 <div className={`transition-all duration-300 ${step.completed ? "text-primary scale-110" : "text-muted-foreground group-hover/step:text-primary"}`}>
                                                   {step.completed ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
@@ -1016,3 +1101,35 @@ export const InteractableSkillTracker = withInteractable(SkillTracker, {
   description: "Displays and manages user skill challenges and learning steps.",
   propsSchema: skillTrackerSchema,
 });
+
+/* ------------------------------------------------------------------ */
+/* Small "session pulse" — shows tasks completed in this session       */
+/* ------------------------------------------------------------------ */
+
+function SessionPulse({ count }: { count: number }) {
+  if (count <= 0) {
+    return (
+      <div className="hidden md:flex items-center gap-2 bg-muted/40 border border-border rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+        <Flame className="w-3 h-3" />
+        Session: 0
+      </div>
+    );
+  }
+  return (
+    <motion.div
+      key={count}
+      initial={{ scale: 0.8 }}
+      animate={{ scale: [0.8, 1.1, 1] }}
+      transition={{ duration: 0.4 }}
+      className="hidden md:flex items-center gap-2 bg-gradient-to-r from-primary/15 to-accent/15 border border-primary/30 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary"
+    >
+      <motion.div
+        animate={{ rotate: [0, -10, 10, 0] }}
+        transition={{ duration: 0.5 }}
+      >
+        <Flame className="w-3 h-3 text-orange-400" />
+      </motion.div>
+      <span>Session: {count}</span>
+    </motion.div>
+  );
+}

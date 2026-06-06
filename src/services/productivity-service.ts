@@ -189,18 +189,18 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
         const allDone = updatedSteps.every(s => s.completed);
         if (!wasCompleted) {
           awardAction = "challenge_step_complete";
-          awardMeta = { challengeId: c.id, stepId: input.stepId, role: c.role };
+          awardMeta = { challengeId: c.id, stepId: input.stepId, role: c.role, title: c.title };
         }
         if (allDone && !c.completed) {
           awardAction = "challenge_complete";
-          awardMeta = { challengeId: c.id, role: c.role };
+          awardMeta = { challengeId: c.id, role: c.role, title: c.title };
         }
         return { ...c, steps: updatedSteps, completed: allDone, completedAt: allDone ? new Date().toISOString() : undefined };
       }
       const newCompleted = input.completed ?? !c.completed;
       if (newCompleted && !c.completed) {
         awardAction = "challenge_complete";
-        awardMeta = { challengeId: c.id, role: c.role };
+        awardMeta = { challengeId: c.id, role: c.role, title: c.title };
       }
       return {
         ...c,
@@ -213,9 +213,16 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
   });
 
   await redis.set(keys.skills, updated);
-  if (awardAction) safeAwardXP(userId, awardAction, awardMeta);
+
+  let xpResult = null;
+  if (awardAction) {
+    const { awardXP: award, syncLeaderboard: sync } = await import("./gamification-service");
+    xpResult = await award({ userId, action: awardAction, meta: awardMeta });
+    if (xpResult) void sync(userId);
+  }
+
   revalidatePath("/");
-  return { success: true };
+  return { success: true, xp: xpResult };
 }
 
 /**

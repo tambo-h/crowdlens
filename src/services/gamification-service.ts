@@ -61,7 +61,19 @@ export interface LeaderboardEntry {
   emoji: string;
 }
 
-export async function awardXP({ userId, action, meta }: { userId: string; action: XPAction; meta?: Record<string, any> }): Promise<XPEvent | null> {
+export interface XPAwardResult {
+  event: XPEvent;
+  totalXP: number;
+  newAchievements: Achievement[];
+  level: LevelDef;
+  nextLevel: LevelDef | null;
+  xpToNextLevel: number;
+  progressPercent: number;
+  leveledUp: boolean;
+  prevLevel: number;
+}
+
+export async function awardXP({ userId, action, meta }: { userId: string; action: XPAction; meta?: Record<string, any> }): Promise<XPAwardResult | null> {
   if (!userId) return null;
 
   const k = keys(userId);
@@ -75,6 +87,9 @@ export async function awardXP({ userId, action, meta }: { userId: string; action
     multiplier *= 1.25;
     await redis.set(k.lastAction, today);
   }
+
+  const xpBefore = (await redis.get<number>(k.xp)) || 0;
+  const prevLevel = getLevelForXP(xpBefore).level;
 
   const streak = (await redis.get<number>(k.streak)) || 0;
   if (streak >= 3) multiplier *= 1.5;
@@ -115,9 +130,23 @@ export async function awardXP({ userId, action, meta }: { userId: string; action
   history.unshift(event);
   await redis.set(k.history, history.slice(0, 50));
 
-  void checkAchievements(userId);
+  const newAchievements = await checkAchievements(userId);
 
-  return event;
+  const xpAfter = (await redis.get<number>(k.xp)) || 0;
+  const prog = getLevelProgress(xpAfter);
+  const leveledUp = prog.level.level > prevLevel;
+
+  return {
+    event,
+    totalXP: xpAfter,
+    newAchievements,
+    level: prog.level,
+    nextLevel: prog.next,
+    xpToNextLevel: prog.xpToNextLevel,
+    progressPercent: prog.progressPercent,
+    leveledUp,
+    prevLevel,
+  };
 }
 
 export async function getUserStats(userId: string): Promise<UserGamification> {
@@ -168,7 +197,7 @@ export async function getUserStats(userId: string): Promise<UserGamification> {
   };
 }
 
-async function checkAchievements(userId: string) {
+async function checkAchievements(userId: string): Promise<Achievement[]> {
   const k = keys(userId);
   const unlocked = (await redis.get<string[]>(k.achievements)) || [];
   const unlockedSet = new Set(unlocked);
@@ -208,6 +237,7 @@ async function checkAchievements(userId: string) {
     const bonusTotal = newlyUnlocked.reduce((s, a) => s + a.bonus, 0);
     if (bonusTotal > 0) await redis.incrby(k.xp, bonusTotal);
   }
+  return newlyUnlocked;
 }
 
 export async function getGlobalLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {

@@ -62,7 +62,7 @@ export function GamificationPanel({
   showHistory = true,
 }: GamificationPanelProps) {
   const { userId, creativeRefreshTrigger } = useProductivity();
-  const { show: showXPToast } = useXPToast();
+  const { showXP: showXPToast, showNudge } = useXPToast();
   const [stats, setStats] = useState<UserGamification | null>(null);
   const [board, setBoard] = useState<LeaderboardEntry[]>([]);
   const [prevLevel, setPrevLevel] = useState<number | null>(null);

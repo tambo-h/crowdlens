@@ -482,11 +482,55 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
 
             const newTime = prev.timeLeft - 1;
             if (newTime === 0) {
-                return { ...prev, timeLeft: 0, isRunning: false };
+                const isWork = prev.sessionType === "work";
+                const nextCompleted = isWork ? prev.sessionsCompleted + 1 : prev.sessionsCompleted;
+                const nextSessionsToday = isWork ? (prev.sessionsToday || 0) + 1 : (prev.sessionsToday || 0);
+
+                let nextType: "work" | "break" | "longBreak" = "work";
+                let nextDuration = prev.workDuration;
+
+                if (isWork) {
+                    const isLong = nextCompleted % 4 === 0 && nextCompleted > 0;
+                    nextType = isLong ? "longBreak" : "break";
+                    nextDuration = isLong ? prev.longBreakDuration : prev.breakDuration;
+                } else {
+                    nextType = "work";
+                    nextDuration = prev.workDuration;
+                }
+
+                if (userId && isWork) {
+                    void startPomodoroService(userId).catch(() => {});
+                }
+
+                // Add to history in localStorage if in browser
+                if (typeof window !== "undefined" && isWork) {
+                    try {
+                        const historyKey = `pomodoro_history_${userId || 'guest'}`;
+                        const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+                        const newSession = {
+                            id: `session_${Date.now()}`,
+                            timestamp: new Date().toISOString(),
+                            duration: prev.workDuration,
+                            type: "work"
+                        };
+                        localStorage.setItem(historyKey, JSON.stringify([newSession, ...history]));
+                    } catch (e) {
+                        console.error("Failed to save Pomodoro to history", e);
+                    }
+                }
+
+                return {
+                    ...prev,
+                    timeLeft: nextDuration * 60,
+                    isRunning: false,
+                    sessionType: nextType,
+                    sessionsCompleted: nextCompleted,
+                    sessionsToday: nextSessionsToday
+                };
             }
             return { ...prev, timeLeft: newTime };
         });
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;

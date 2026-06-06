@@ -75,11 +75,12 @@ const GlobalLoadingOverlay = ({ isProcessingAI }: { isProcessingAI: boolean }) =
 };
 
 function HomeContent() {
-  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm, lastSetupRole, setLastSetupRole } = useProductivity();
+  const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm, lastSetupRole, setLastSetupRole, isLoadingChallenges } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
   const [isDarkPref, setIsDarkPref] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
 
   // Auto switch to dark mode on low energy
   const isDark = isLowEnergy || isDarkPref;
@@ -95,6 +96,8 @@ function HomeContent() {
   // Seamless redirect + scroll to newly created skill track
   React.useEffect(() => {
     if (!lastSetupRole) return;
+    if (isLoadingChallenges) return; // Wait until the loading state transitions to false
+
     // Navigate to Skills Track page
     setActiveView('skills');
     // After navigation, scroll to the newly added track (at the bottom of the page)
@@ -110,9 +113,9 @@ function HomeContent() {
         if (mainEl) mainEl.scrollTo({ top: mainEl.scrollHeight, behavior: 'smooth' });
       }
       setLastSetupRole(null);
-    }, 600);
+    }, 100);
     return () => clearTimeout(scrollTimeout);
-  }, [lastSetupRole, setActiveView, setLastSetupRole]);
+  }, [lastSetupRole, isLoadingChallenges, setActiveView, setLastSetupRole]);
 
 
 
@@ -183,23 +186,54 @@ function HomeContent() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed md:relative z-50 w-64 h-full border-r border-border bg-card flex flex-col transition-transform duration-300",
+        "fixed md:relative z-50 h-full border-r border-border bg-card flex flex-col transition-all duration-300",
+        isSidebarCollapsed ? "w-20" : "w-64",
         showMobileMenu ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1 text-primary">
-              <Sparkles className="w-6 h-6" />
-              <h1 className="text-xl font-bold tracking-tight">TaskStack</h1>
+        <div className={cn("p-6 border-b border-border flex items-center justify-between", isSidebarCollapsed && "p-4 justify-center flex-col gap-4")}>
+          {!isSidebarCollapsed ? (
+            <>
+              <div>
+                <div className="flex items-center gap-2 mb-1 text-primary">
+                  <Sparkles className="w-6 h-6 animate-pulse" />
+                  <h1 className="text-xl font-bold tracking-tight">TaskStack</h1>
+                </div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  className="hidden md:block p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90"
+                  onClick={() => setIsSidebarCollapsed(true)}
+                  title="Collapse Sidebar"
+                >
+                  <Menu className="w-4 h-4" />
+                </button>
+                <button
+                  className="md:hidden p-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <button
+                className="p-1.5 rounded-xl hover:bg-muted text-primary transition-all active:scale-90"
+                onClick={() => setIsSidebarCollapsed(false)}
+                title="Expand Sidebar"
+              >
+                <Sparkles className="w-6 h-6 animate-pulse" />
+              </button>
+              <button
+                className="hidden md:block p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90"
+                onClick={() => setIsSidebarCollapsed(false)}
+                title="Expand Sidebar"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
             </div>
-            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Productivity OS</p>
-          </div>
-          <button
-            className="md:hidden p-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setShowMobileMenu(false)}
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
+          )}
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
@@ -211,18 +245,20 @@ function HomeContent() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05, duration: 0.4 }}
-                whileHover={{ x: 4 }}
+                whileHover={{ x: isSidebarCollapsed ? 0 : 4 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setActiveView(item.id!);
                   setShowMobileMenu(false);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold group",
+                  "w-full flex items-center rounded-2xl transition-all text-sm font-semibold group",
+                  isSidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-4 py-3",
                   activeView === item.id
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                     : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                 )}
+                title={isSidebarCollapsed ? item.label : undefined}
               >
                 <div className={cn(
                   "p-1.5 rounded-lg transition-colors",
@@ -230,17 +266,19 @@ function HomeContent() {
                 )}>
                   {item.icon}
                 </div>
-                {item.label}
+                {!isSidebarCollapsed && item.label}
               </motion.button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-border space-y-2">
-          <ApiKeyCheck>
-            <></>
-          </ApiKeyCheck>
-        </div>
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-t border-border space-y-2">
+            <ApiKeyCheck>
+              <></>
+            </ApiKeyCheck>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}

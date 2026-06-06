@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { getSavedLinks, deleteLink as deleteLinkService, saveLink as saveLinkService } from "@/services/productivity-service";
 import { Trash2, ExternalLink, Plus, X, AlertOctagon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 function LinkPreview({ url }: { url: string }) {
   const [preview, setPreview] = useState<any>(null);
@@ -62,12 +63,14 @@ function LinkPreview({ url }: { url: string }) {
 }
 
 export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) {
-  const { userId, creativeRefreshTrigger, triggerCreativeRefresh, openConfirm } = useProductivity();
+  const { userId, creativeRefreshTrigger, triggerCreativeRefresh, openConfirm, challenges } = useProductivity();
   const [links, setLinks] = useState<any[]>(initialLinks);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newUrl, setNewUrl] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [newLinkRole, setNewLinkRole] = useState<string>("");
 
   useEffect(() => {
     if (!userId) return;
@@ -94,9 +97,10 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId || !newUrl) return;
-    await saveLinkService(userId, { url: newUrl, title: newTitle, tags: [] });
+    await saveLinkService(userId, { url: newUrl, title: newTitle, tags: [], role: newLinkRole || undefined });
     setNewUrl("");
     setNewTitle("");
+    setNewLinkRole("");
     setIsAdding(false);
     triggerCreativeRefresh();
   };
@@ -121,7 +125,14 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
     }
   };
 
-  const linksToDisplay = links.length > 0 ? links : (Array.isArray(initialLinks) ? initialLinks : []);
+  const roles = Array.from(new Set((challenges || []).map((c: any) => c.role).filter(Boolean))) as string[];
+
+  const rawLinks = links.length > 0 ? links : (Array.isArray(initialLinks) ? initialLinks : []);
+  const filteredLinks = rawLinks.filter((link: any) => {
+    if (selectedRole === "all") return true;
+    if (selectedRole === "uncategorized") return !link.role;
+    return link.role === selectedRole;
+  });
 
   if (isLoading && links.length === 0) {
     return (
@@ -133,10 +144,10 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
 
   return (
     <div className="bg-card rounded-xl p-6 border border-border max-w-6xl w-full">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
         <div>
            <h2 className="text-2xl font-bold text-foreground">📚 Knowledge Base</h2>
-           <div className="text-xs text-muted-foreground">{linksToDisplay.length} resources saved</div>
+           <div className="text-xs text-muted-foreground">{filteredLinks.length} resources displayed ({rawLinks.length} total)</div>
         </div>
         <button
             onClick={() => setIsAdding(!isAdding)}
@@ -147,8 +158,48 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
         </button>
       </div>
 
+      {/* Filter Chips */}
+      <div className="flex gap-2 overflow-x-auto pb-4 pt-1 mb-6 border-b border-border/50 no-scrollbar -mx-2 px-2">
+        <button
+          onClick={() => setSelectedRole("all")}
+          className={cn(
+            "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border whitespace-nowrap active:scale-95",
+            selectedRole === "all"
+              ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/15"
+              : "bg-muted/30 hover:bg-muted text-muted-foreground border-border/50"
+          )}
+        >
+          All Tracks
+        </button>
+        {roles.map(role => (
+          <button
+            key={role}
+            onClick={() => setSelectedRole(role)}
+            className={cn(
+              "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border whitespace-nowrap active:scale-95",
+              selectedRole === role
+                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/15"
+                : "bg-muted/30 hover:bg-muted text-muted-foreground border-border/50"
+            )}
+          >
+            {role}
+          </button>
+        ))}
+        <button
+          onClick={() => setSelectedRole("uncategorized")}
+          className={cn(
+            "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all border whitespace-nowrap active:scale-95",
+            selectedRole === "uncategorized"
+              ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/15"
+              : "bg-muted/30 hover:bg-muted text-muted-foreground border-border/50"
+          )}
+        >
+          Uncategorized
+        </button>
+      </div>
+
       {isAdding && (
-          <form onSubmit={handleAddLink} className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row gap-4">
+          <form onSubmit={handleAddLink} className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
@@ -162,6 +213,16 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
                 className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary text-sm"
                 required
               />
+              <select
+                value={newLinkRole}
+                onChange={(e) => setNewLinkRole(e.target.value)}
+                className="px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary text-sm min-w-[160px] text-foreground cursor-pointer"
+              >
+                <option value="">No Track (Uncategorized)</option>
+                {roles.map(role => (
+                  <option key={role} value={role}>{role} Track</option>
+                ))}
+              </select>
               <button type="submit" className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-medium">
                   Save
               </button>
@@ -169,7 +230,7 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {linksToDisplay.map((link, idx) => (
+        {filteredLinks.map((link, idx) => (
           <div key={link.id || idx} className="group/link relative">
             <a
               href={link.url}
@@ -222,11 +283,11 @@ export function LinkCard({ links: initialLinks = [], viewMode = "cards" }: any) 
           </div>
         ))}
 
-        {linksToDisplay.length === 0 && (
+        {filteredLinks.length === 0 && (
           <div className="col-span-full text-center py-20 bg-muted/10 rounded-xl border border-dashed border-border">
             <span className="text-6xl block mb-4 opacity-50">📚</span>
-            <p className="text-muted-foreground font-medium">Your knowledge base is empty.</p>
-            <p className="text-sm text-muted-foreground mt-1">AI can suggest resources, or you can save them manually.</p>
+            <p className="text-muted-foreground font-medium">No resources found.</p>
+            <p className="text-sm text-muted-foreground mt-1">Try changing your filter or add a new link to this track!</p>
           </div>
         )}
       </div>

@@ -567,7 +567,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                                       <div className="flex -space-x-1">
                                         {challenge.steps.slice(0, 3).map((_step: any, i: number) => (
-                                          <div key={i} className={`w-1.5 h-1.5 rounded-full border border-background ${challenge.steps[i].completed ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                          <div key={_step.id || `step-dot-${i}`} className={`w-1.5 h-1.5 rounded-full border border-background ${challenge.steps[i].completed ? "bg-primary" : "bg-muted-foreground/30"}`} />
                                         ))}
                                       </div>
                                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
@@ -729,9 +729,9 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
                                       {/* Filter out any steps with empty titles before rendering */}
                                       {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).length > 0 ? (
                                         <div className="space-y-2">
-                                          {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).map((step: any) => (
+                                          {challenge.steps.filter((s: any) => s?.title?.trim().length > 0).map((step: any, sIdx: number) => (
                                             <div
-                                              key={step.id}
+                                              key={step.id || `step-${sIdx}`}
                                               className="flex items-center justify-between text-sm group/step py-1.5 px-3 rounded-lg hover:bg-background/50 transition-colors border border-transparent hover:border-border/50"
                                             >
                                               <div
@@ -846,7 +846,7 @@ export function SkillTracker({ challenges: challengesByAI = [] }: SkillTrackerPr
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                           {(challenge.resources || []).map((res: any, idx: number) => (
-                                            <div key={idx} className="relative group/res">
+                                            <div key={res.url || `res-${idx}`} className="relative group/res">
                                               <a
                                                 href={res.url}
                                                 target="_blank"

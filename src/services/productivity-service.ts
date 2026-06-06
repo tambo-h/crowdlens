@@ -7,6 +7,7 @@
 
 import { redis } from "@/lib/upstash";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { generatePersonalizedData, generateChallengeDetails } from "./ai-service";
 
 /**
@@ -43,9 +44,10 @@ export async function expandChallenge(userId: string, challengeId: string): Prom
 
   // 4. Sync resources to the global links section
   if (expansion.resources && expansion.resources.length > 0) {
-    await batchSaveLinks(userId, expansion.resources);
+    await batchSaveLinks(userId, expansion.resources, challenge.role);
   }
 
+  revalidatePath("/");
   return { success: true, steps, resources: expansion.resources };
 }
 
@@ -181,6 +183,7 @@ export async function toggleChallenge(userId: string, input: { challengeId: stri
   });
 
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -207,6 +210,7 @@ export async function addChallengeStep(userId: string, input: { challengeId: str
   });
 
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -225,6 +229,7 @@ export async function updateChallengeStep(userId: string, input: { challengeId: 
   });
 
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -244,6 +249,7 @@ export async function deleteChallengeStep(userId: string, input: { challengeId: 
   });
 
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -263,6 +269,7 @@ export async function saveChallenge(userId: string, challenge: Omit<Challenge, "
     order: actualChallenge.order ?? challenges.length
   };
   await redis.set(keys.skills, [newChallenge, ...challenges]);
+  revalidatePath("/");
   return newChallenge;
 }
 
@@ -284,6 +291,7 @@ export async function batchSaveChallenges(userId: string, challengesToSave: Omit
   }));
   // Append new challenges after existing ones
   await redis.set(keys.skills, [...existing, ...newChallenges]);
+  revalidatePath("/");
   return { success: true, count: newChallenges.length };
 }
 
@@ -298,6 +306,7 @@ export async function deleteRoleTrack(userId: string, role: string): Promise<any
   const challenges = await getChallenges(userId);
   const updated = challenges.filter(c => c.role !== role);
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -318,6 +327,7 @@ export async function setTrackDeadline(userId: string, role: string, deadline: s
   const deadlines = await redis.get<Record<string, string>>(keys.track_deadline) || {};
   deadlines[role] = deadline;
   await redis.set(keys.track_deadline, deadlines);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -337,6 +347,7 @@ export async function deleteChallenge(userId: string, challengeId: string): Prom
   const challenges = await getChallenges(userId);
   const filtered = challenges.filter(c => c.id !== challengeId);
   await redis.set(keys.skills, filtered);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -348,6 +359,7 @@ export async function updateChallenge(userId: string, input: { challengeId: stri
     c.id === actualInput.challengeId ? { ...c, ...actualInput.updates } : c
   );
   await redis.set(keys.skills, updated);
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -360,11 +372,12 @@ export async function getSavedLinks(userId: string, input: { limit?: number } = 
 /**
  * Save a new link
  */
-export async function saveLink(userId: string, input: { url: string, title: string, tags: string[], notes?: string }): Promise<any> {
+export async function saveLink(userId: string, input: { url: string, title: string, tags: string[], notes?: string, role?: string }): Promise<any> {
   const keys = getKeys(userId);
   const links = await redis.get<any[]>(keys.links) || [];
   const newLink = { ...input, id: `l_${Date.now()}`, savedAt: new Date().toISOString() };
   await redis.set(keys.links, [newLink, ...links]);
+  revalidatePath("/");
   return newLink;
 }
 
@@ -387,16 +400,18 @@ export async function deleteLink(userId: string, linkId: string): Promise<any> {
 /**
  * Bulk save links (called by AI onboarding)
  */
-export async function batchSaveLinks(userId: string, linksToSave: { title: string, url: string, tags: string[] }[] = []): Promise<any> {
+export async function batchSaveLinks(userId: string, linksToSave: { title: string, url: string, tags: string[] }[] = [], role?: string): Promise<any> {
   const keys = getKeys(userId);
   const existing = await getSavedLinks(userId);
   const newLinks = (linksToSave || []).map((l, i) => ({
     ...l,
+    role: role || (l as any).role,
     tags: l.tags || [],
     id: `al_${Date.now()}_${i}`,
     savedAt: new Date().toISOString()
   }));
   await redis.set(keys.links, [...newLinks, ...existing]);
+  revalidatePath("/");
   return { success: true, count: newLinks.length };
 }
 
@@ -644,7 +659,7 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
     })));
 
     // 3. Batch Save Links
-    await batchSaveLinks(actualUserId, links);
+    await batchSaveLinks(actualUserId, links, actualInput.skill);
 
     // 4. Save track-level deadline
     if (generated.trackDeadline) {
@@ -653,6 +668,7 @@ export async function setupPersonalizedWorkspace(userId: string, input: { skill:
       await redis.set(keys.track_deadline, deadlines);
     }
 
+    revalidatePath("/");
     return {
       success: true,
       message: `### ✨ Workspace Optimized!\n\nI have created these set of skills for you to achieve your goal: **${actualInput.skill}**. Your new growth tracks and resources are now live and synced across your OS.`,

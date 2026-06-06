@@ -2,6 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 import { Challenge, getChallenges, toggleChallenge as toggleChallengeService, saveChallenge as saveChallengeService, startPomodoroSession as startPomodoroService, seedProductivityData, getEnergyData, logEnergyLevel as logEnergyService, expandChallenge as expandChallengeService, checkUserExistence } from "@/services/productivity-service";
 
+export interface GoogleProfile {
+    name: string;
+    email: string;
+    picture?: string;
+}
+
 interface PomodoroState {
     isRunning: boolean;
     timeLeft: number;
@@ -19,6 +25,10 @@ interface ProductivityContextType {
     userId: string | null;
     setUserId: React.Dispatch<React.SetStateAction<string | null>>;
     onboardGuest: () => Promise<void>;
+    googleProfile: GoogleProfile | null;
+    isGoogleUser: boolean;
+    signInWithGoogle: () => void;
+    googleLogout: () => Promise<void>;
 
     // Challenges / Skills
     challenges: Challenge[];
@@ -91,6 +101,7 @@ const ProductivityContext = createContext<ProductivityContextType | undefined>(u
 
 export function ProductivityProvider({ children }: { children: React.ReactNode }) {
     const [userId, setUserId] = useState<string | null>(null);
+    const [googleProfile, setGoogleProfile] = useState<GoogleProfile | null>(null);
     const [activeView, setActiveView] = useState("dashboard");
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [collapsedRoles, setCollapsedRoles] = useState<string[]>([]);
@@ -108,6 +119,21 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     const [trackDeadlines, setTrackDeadlines] = useState<Record<string, string>>({});
     const [isProcessingAI, setIsProcessingAI] = useState(false);
     const [lastSetupRole, setLastSetupRole] = useState<string | null>(null);
+
+    // Computed
+    const isGoogleUser = (userId ?? "").startsWith("go_");
+
+    // Initiate Google OAuth redirect flow
+    const signInWithGoogle = useCallback(() => {
+        window.location.href = "/api/auth/google";
+    }, []);
+
+    // Google logout — clears server cookies and local state
+    const googleLogout = useCallback(async () => {
+        await fetch("/api/auth/me", { method: "DELETE" });
+        setUserId(null);
+        setGoogleProfile(null);
+    }, []);
 
     // Pomodoro state
     const [pomodoro, setPomodoro] = useState<PomodoroState>({
@@ -137,22 +163,51 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         type: "danger"
     });
 
-    // Load userId from localStorage on mount
+    // Load session on mount — prioritise server cookie (Google) over localStorage (PIN)
     useEffect(() => {
-        const storedId = localStorage.getItem("taskstack_pin_id");
-        if (storedId) {
-            setUserId(storedId);
+        const params = new URLSearchParams(window.location.search);
+        const googleAuth = params.get("google_auth");
+        const authError = params.get("auth_error");
+
+        if (authError) {
+            console.error("[Auth] Google OAuth error:", authError);
+            window.history.replaceState({}, "", window.location.pathname);
         }
+
+        fetch("/api/auth/me")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.authenticated && data.userId) {
+                    setUserId(data.userId);
+                    if (data.googleProfile) {
+                        setGoogleProfile(data.googleProfile);
+                    }
+                    if (googleAuth === "success") {
+                        window.history.replaceState({}, "", window.location.pathname);
+                    }
+                } else {
+                    // Fall back to PIN (guest users)
+                    const storedId = localStorage.getItem("taskstack_pin_id");
+                    if (storedId) setUserId(storedId);
+                }
+            })
+            .catch(() => {
+                const storedId = localStorage.getItem("taskstack_pin_id");
+                if (storedId) setUserId(storedId);
+            });
     }, []);
 
     const triggerCreativeRefresh = useCallback(() => {
         setCreativeRefreshTrigger(prev => prev + 1);
     }, []);
 
-    // Sync userId to localStorage and seed data
+    // Sync userId to localStorage (only for PIN users) and seed data
     useEffect(() => {
         if (userId) {
-            localStorage.setItem("taskstack_pin_id", userId);
+            // Only persist PIN-based users to localStorage
+            if (!userId.startsWith("go_")) {
+                localStorage.setItem("taskstack_pin_id", userId);
+            }
             // Seed data if this is a new user (or ensure it exists)
             seedProductivityData(userId).then(() => {
                 triggerCreativeRefresh();
@@ -410,6 +465,7 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     return (
         <ProductivityContext.Provider value={{
             userId, setUserId, onboardGuest,
+            googleProfile, isGoogleUser, signInWithGoogle, googleLogout,
             challenges, isLoadingChallenges, expandingIds, refreshChallenges, toggleChallenge: handleToggleChallenge, expandChallengeDetails, abortExpansion,
             saveChallenge: handleSaveChallenge, updateChallenge: handleUpdateChallenge, deleteChallenge: handleDeleteChallenge, deleteRoleTrack: handleDeleteRoleTrack,
             addChallengeStep: handleAddChallengeStep, updateChallengeStep: handleUpdateChallengeStep, deleteChallengeStep: handleDeleteChallengeStep,

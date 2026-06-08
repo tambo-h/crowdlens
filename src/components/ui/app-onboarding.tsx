@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Target, Search, Timer, Zap, ArrowRight, ArrowLeft, X, CheckCircle2, User } from "lucide-react";
+import { Sparkles, Target, Search, Timer, Zap, ArrowRight, ArrowLeft, X, CheckCircle2, User, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useProductivity } from "@/context/productivity-context";
+import { useProductivity, THEMES } from "@/context/productivity-context";
 
 const TUTORIAL_STEPS = [
   {
@@ -54,11 +54,19 @@ const TUTORIAL_STEPS = [
     icon: <User className="w-12 h-12 text-emerald-400" />,
     color: "from-emerald-500/20 to-emerald-500/5",
     accent: "bg-emerald-500"
+  },
+  {
+    title: "Select Your Theme",
+    subtitle: "Visual Style",
+    description: "Choose a visual style that matches your productivity space. You can also customize this anytime in user settings.",
+    icon: <Palette className="w-12 h-12 text-indigo-400" />,
+    color: "from-indigo-500/20 to-indigo-500/5",
+    accent: "bg-indigo-500"
   }
 ];
 
 export function AppOnboarding() {
-  const { isOnboardingOpen, setIsOnboardingOpen, savePersona, persona, isProcessingAI } = useProductivity();
+  const { isOnboardingOpen, setIsOnboardingOpen, savePersona, persona, isProcessingAI, theme, setTheme } = useProductivity();
   const [currentStep, setCurrentStep] = useState(0);
 
   const [formData, setFormData] = useState({
@@ -132,6 +140,7 @@ export function AppOnboarding() {
 
   const step = TUTORIAL_STEPS[currentStep];
   const isPersonaStep = currentStep === 5;
+  const isThemeStep = currentStep === 6;
 
   return (
     <AnimatePresence>
@@ -182,11 +191,11 @@ export function AppOnboarding() {
                   <p className="text-sm font-black uppercase tracking-widest text-primary/80">{step.subtitle}</p>
                 </div>
 
-                {!isPersonaStep ? (
+                {!isPersonaStep && !isThemeStep ? (
                   <p className="text-sm sm:text-lg text-muted-foreground font-medium leading-relaxed max-w-md">
                     {step.description}
                   </p>
-                ) : (
+                ) : isPersonaStep ? (
                   <form onSubmit={handleSubmit} className="w-full text-left space-y-4 max-w-lg mt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Name / Nickname */}
@@ -274,6 +283,48 @@ export function AppOnboarding() {
                       </div>
                     </div>
                   </form>
+                ) : (
+                  <div className="w-full text-left space-y-4 max-w-lg mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                      {THEMES.map((t) => {
+                        const isSelected = theme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setTheme(t.id)}
+                            className={cn(
+                              "flex flex-col p-4 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer",
+                              isSelected
+                                ? "border-primary bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/30"
+                                : "border-border hover:border-muted-foreground/35 hover:bg-muted/10"
+                            )}
+                          >
+                            <div className="flex items-center justify-between w-full mb-3">
+                              <span className="font-bold text-sm text-foreground">{t.name}</span>
+                              <span className={cn(
+                                "text-[9px] uppercase font-black px-1.5 py-0.5 rounded",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              )}>
+                                {t.mode}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 border border-border/40 p-1.5 rounded-lg bg-background/50 self-start">
+                              {t.previewColors.map((color, idx) => (
+                                <div
+                                  key={idx}
+                                  className="w-3.5 h-3.5 rounded-full border border-black/5"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 <div className="w-full flex items-center justify-center gap-2 pt-2">

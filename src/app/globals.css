@@ -94,7 +94,7 @@
 }
 
 .dark {
-  /* VS Code Dark+ Theme */
+  /* Default VS Code Dark+ Theme */
   --color-primary-blue: #007acc;
   --color-primary-blue-light: #569cd6;
   --color-bg-main: #1e1e1e;
@@ -105,7 +105,6 @@
   --color-text-secondary: #9cdcfe;
   --color-text-muted: #808080;
 
-  /* VS Code Dark+ Tailwind CSS Variables */
   --background: #1e1e1e;
   --foreground: #d4d4d4;
   --card: #252526;
@@ -124,19 +123,12 @@
   --border: #3c3c3c;
   --input: #3c3c3c;
   --ring: #007acc;
-  /* VS Code token colors for charts */
   --chart-1: #569cd6;
-  /* Blue - keywords */
   --chart-2: #6a9955;
-  /* Green - strings */
   --chart-3: #c586c0;
-  /* Purple - control flow */
   --chart-4: #dcdcaa;
-  /* Yellow - functions */
   --chart-5: #ce9178;
-  /* Orange - strings */
 
-  /* Tambo Specific Variables needed for tambo components */
   --container: #333333;
   --backdrop: rgba(0, 0, 0, 0.5);
   --muted-backdrop: rgba(0, 0, 0, 0.2);
@@ -144,6 +136,281 @@
   --panel-left-width: 500px;
   --panel-right-width: 500px;
   --sidebar-width: 3rem;
+}
+
+/* Explicit Themes */
+.theme-doodle-white {
+  --color-primary-blue: #3d3d3d;
+  --color-primary-blue-light: #5a5a5a;
+  --color-bg-main: #f5f0eb;
+  --color-bg-surface: #ece5dd;
+  --color-bg-card: #fefcf9;
+  --color-accent-green: #c4b5a5;
+  --color-text-primary: #2c2c2c;
+  --color-text-secondary: #6b6259;
+  --color-text-muted: #8a8278;
+
+  --background: #f5f0eb;
+  --foreground: #2c2c2c;
+  --card: #fefcf9;
+  --card-foreground: #2c2c2c;
+  --popover: #fefcf9;
+  --popover-foreground: #2c2c2c;
+  --primary: #3d3d3d;
+  --primary-foreground: #fefcf9;
+  --secondary: #d6cfc7;
+  --secondary-foreground: #2c2c2c;
+  --muted: #ece5dd;
+  --muted-foreground: #8a8278;
+  --accent: #c4b5a5;
+  --accent-foreground: #2c2c2c;
+  --destructive: #c0392b;
+  --border: #ddd5cc;
+  --input: #ece5dd;
+  --ring: #3d3d3d;
+  --chart-1: #8b7355;
+  --chart-2: #a0926b;
+  --chart-3: #7d6b5d;
+  --chart-4: #b8a88a;
+  --chart-5: #9c8878;
+
+  --container: #efe9e1;
+  --backdrop: rgba(44, 44, 44, 0.2);
+  --muted-backdrop: rgba(44, 44, 44, 0.08);
+}
+
+.theme-nordic-frost {
+  --color-primary-blue: #88c0d0;
+  --color-primary-blue-light: #8fbcbb;
+  --color-bg-main: #eceff4;
+  --color-bg-surface: #e5e9f0;
+  --color-bg-card: #f8fafc;
+  --color-accent-green: #a3be8c;
+  --color-text-primary: #2e3440;
+  --color-text-secondary: #4c566a;
+  --color-text-muted: #d8dee9;
+
+  --background: #eceff4;
+  --foreground: #2e3440;
+  --card: #ffffff;
+  --card-foreground: #2e3440;
+  --popover: #ffffff;
+  --popover-foreground: #2e3440;
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+  --secondary: #d8dee9;
+  --secondary-foreground: #2e3440;
+  --muted: #e5e9f0;
+  --muted-foreground: #4c566a;
+  --accent: #81a1c1;
+  --accent-foreground: #2e3440;
+  --destructive: #bf616a;
+  --border: #d8dee9;
+  --input: #e5e9f0;
+  --ring: #88c0d0;
+  --chart-1: #88c0d0;
+  --chart-2: #8fbcbb;
+  --chart-3: #81a1c1;
+  --chart-4: #5e81ac;
+  --chart-5: #a3be8c;
+
+  --container: #e5e9f0;
+  --backdrop: rgba(46, 52, 64, 0.1);
+  --muted-backdrop: rgba(46, 52, 64, 0.05);
+}
+
+.theme-vscode-dark {
+  --color-primary-blue: #007acc;
+  --color-primary-blue-light: #569cd6;
+  --color-bg-main: #1e1e1e;
+  --color-bg-surface: #252526;
+  --color-bg-card: #2d2d2d;
+  --color-accent-green: #6a9955;
+  --color-text-primary: #d4d4d4;
+  --color-text-secondary: #9cdcfe;
+  --color-text-muted: #808080;
+
+  --background: #1e1e1e;
+  --foreground: #d4d4d4;
+  --card: #252526;
+  --card-foreground: #d4d4d4;
+  --popover: #252526;
+  --popover-foreground: #d4d4d4;
+  --primary: #007acc;
+  --primary-foreground: #ffffff;
+  --secondary: #264f78;
+  --secondary-foreground: #d4d4d4;
+  --muted: #2d2d2d;
+  --muted-foreground: #808080;
+  --accent: #6a9955;
+  --accent-foreground: #d4d4d4;
+  --destructive: #f44747;
+  --border: #3c3c3c;
+  --input: #3c3c3c;
+  --ring: #007acc;
+  --chart-1: #569cd6;
+  --chart-2: #6a9955;
+  --chart-3: #c586c0;
+  --chart-4: #dcdcaa;
+  --chart-5: #ce9178;
+
+  --container: #333333;
+  --backdrop: rgba(0, 0, 0, 0.5);
+  --muted-backdrop: rgba(0, 0, 0, 0.2);
+}
+
+.theme-cyberpunk {
+  --color-primary-blue: #00f0ff;
+  --color-primary-blue-light: #ff0055;
+  --color-bg-main: #0a0813;
+  --color-bg-surface: #100c22;
+  --color-bg-card: #150f2f;
+  --color-accent-green: #9d00ff;
+  --color-text-primary: #f0edf6;
+  --color-text-secondary: #00f0ff;
+  --color-text-muted: #8b7ca8;
+
+  --background: #0a0813;
+  --foreground: #f0edf6;
+  --card: #100c22;
+  --card-foreground: #f0edf6;
+  --popover: #100c22;
+  --popover-foreground: #f0edf6;
+  --primary: #ff0055;
+  --primary-foreground: #ffffff;
+  --secondary: #00f0ff;
+  --secondary-foreground: #0a0813;
+  --muted: #150f2f;
+  --muted-foreground: #8b7ca8;
+  --accent: #9d00ff;
+  --accent-foreground: #ffffff;
+  --destructive: #f43f5e;
+  --border: #2e1e4a;
+  --input: #1b163d;
+  --ring: #ff0055;
+  --chart-1: #ff0055;
+  --chart-2: #00f0ff;
+  --chart-3: #9d00ff;
+  --chart-4: #f43f5e;
+  --chart-5: #e0f2fe;
+
+  --container: #1b163d;
+  --backdrop: rgba(10, 8, 19, 0.85);
+  --muted-backdrop: rgba(10, 8, 19, 0.5);
+}
+
+.theme-aura-midnight {
+  --color-primary-blue: #a78bfa;
+  --color-primary-blue-light: #c084fc;
+  --color-bg-main: #0a0910;
+  --color-bg-surface: #110f1c;
+  --color-bg-card: #171526;
+  --color-accent-green: #ec4899;
+  --color-text-primary: #fffffe;
+  --color-text-secondary: #fecdd3;
+  --color-text-muted: #a7a6b2;
+
+  --background: #0a0910;
+  --foreground: #fffffe;
+  --card: #110f1c;
+  --card-foreground: #fffffe;
+  --popover: #110f1c;
+  --popover-foreground: #fffffe;
+  --primary: #a78bfa;
+  --primary-foreground: #0a0910;
+  --secondary: #fecdd3;
+  --secondary-foreground: #0a0910;
+  --accent: #ec4899;
+  --accent-foreground: #fffffe;
+  --destructive: #ef4444;
+  --border: #252136;
+  --input: #1e1b2f;
+  --ring: #a78bfa;
+  --chart-1: #a78bfa;
+  --chart-2: #fecdd3;
+  --chart-3: #ec4899;
+  --chart-4: #c084fc;
+  --chart-5: #fb7185;
+
+  --container: #1e1b2f;
+  --backdrop: rgba(10, 9, 16, 0.85);
+  --muted-backdrop: rgba(10, 9, 16, 0.5);
+}
+
+.theme-forest-moss {
+  --color-primary-blue: #4d7c0f;
+  --color-primary-blue-light: #65a30d;
+  --color-bg-main: #0f1410;
+  --color-bg-surface: #151c16;
+  --color-bg-card: #1c261e;
+  --color-accent-green: #15803d;
+  --color-text-primary: #e3ece4;
+  --color-text-secondary: #a3e635;
+  --color-text-muted: #8ca391;
+
+  --background: #0f1410;
+  --foreground: #e3ece4;
+  --card: #151c16;
+  --card-foreground: #e3ece4;
+  --popover: #151c16;
+  --popover-foreground: #e3ece4;
+  --primary: #4d7c0f;
+  --primary-foreground: #ffffff;
+  --secondary: #a3e635;
+  --secondary-foreground: #0f1410;
+  --accent: #15803d;
+  --accent-foreground: #e3ece4;
+  --destructive: #dc2626;
+  --border: #232e25;
+  --input: #1c261e;
+  --ring: #4d7c0f;
+  --chart-1: #4d7c0f;
+  --chart-2: #a3e635;
+  --chart-3: #15803d;
+  --chart-4: #65a30d;
+  --chart-5: #84cc16;
+
+  --container: #1c261e;
+  --backdrop: rgba(15, 20, 16, 0.85);
+  --muted-backdrop: rgba(15, 20, 16, 0.5);
+}
+
+.theme-solarized-amber {
+  --color-primary-blue: #2aa198;
+  --color-primary-blue-light: #b58900;
+  --color-bg-main: #002b36;
+  --color-bg-surface: #073642;
+  --color-bg-card: #0b4554;
+  --color-accent-green: #cb4b16;
+  --color-text-primary: #eee8d5;
+  --color-text-secondary: #2aa198;
+  --color-text-muted: #93a1a1;
+
+  --background: #002b36;
+  --foreground: #eee8d5;
+  --card: #073642;
+  --card-foreground: #eee8d5;
+  --popover: #073642;
+  --popover-foreground: #eee8d5;
+  --primary: #b58900;
+  --primary-foreground: #fdf6e3;
+  --secondary: #2aa198;
+  --secondary-foreground: #002b36;
+  --accent: #cb4b16;
+  --accent-foreground: #eee8d5;
+  --destructive: #dc322f;
+  --border: #0b4554;
+  --input: #0b4554;
+  --ring: #b58900;
+  --chart-1: #b58900;
+  --chart-2: #2aa198;
+  --chart-3: #cb4b16;
+  --chart-4: #268bd2;
+  --chart-5: #d33682;
+
+  --container: #0b4554;
+  --backdrop: rgba(0, 43, 54, 0.85);
+  --muted-backdrop: rgba(0, 43, 54, 0.5);
 }
 
 @layer base {
@@ -174,29 +441,21 @@
 
   /* Custom scrollbar for calm aesthetic */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: #ece5dd;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #c4b5a5;
+    background: var(--border);
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #8a8278;
-  }
-
-  .dark ::-webkit-scrollbar-track {
-    background: #252526;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: #007acc;
+    background: var(--primary);
   }
 }
 
@@ -288,32 +547,7 @@ You can remove this if you don't want to use it.
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 120, 0.1);
-  border-radius: 20px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 120, 0.3);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 122, 204, 0.4);
-}
 
 /* Base polish */
 [data-slot="message-input-form"] {

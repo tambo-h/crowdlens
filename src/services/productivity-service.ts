@@ -797,6 +797,7 @@ export interface UserPersona {
   workDesignation?: string;
   interests?: string;
   name?: string;
+  theme?: string;
 }
 
 export async function getUserPersona(userId: string): Promise<UserPersona | null> {

@@ -4,7 +4,7 @@
  */
 
 const getApiKey = () => process.env.OPENROUTER_API_KEY || "";
-const MODEL = "openrouter/free";
+const MODEL = process.env.OPENROUTER_MODEL || "openrouter/free";
 
 export interface GeneratedData {
     habits: Array<{ name: string, category: string, deadline: string }>;

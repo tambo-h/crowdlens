@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, LogOut, User, Key, ChevronDown, Chrome } from "lucide-react";
-import { useProductivity } from "@/context/productivity-context";
+import { Copy, Check, LogOut, User, Key, ChevronDown, Chrome, Palette } from "lucide-react";
+import { useProductivity, THEMES } from "@/context/productivity-context";
 import { cn } from "@/lib/utils";
 
 export function ProfileMenu() {
-    const { userId, setUserId, googleProfile, isGoogleUser, googleLogout, setIsOnboardingOpen } = useProductivity();
+    const { userId, setUserId, googleProfile, isGoogleUser, googleLogout, setIsOnboardingOpen, theme, setTheme } = useProductivity();
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -141,6 +141,39 @@ export function ProfileMenu() {
                                         </p>
                                     </div>
                                 )}
+
+                                {/* Theme Picker Section */}
+                                <div className="p-4 border-b border-border space-y-2.5">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                                        <Palette className="w-3.5 h-3.5 text-indigo-400" />
+                                        Visual Theme
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {THEMES.map((t) => {
+                                            const isSelected = theme === t.id;
+                                            return (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => setTheme(t.id)}
+                                                    className={cn(
+                                                        "relative h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-all active:scale-90 hover:scale-105",
+                                                        isSelected 
+                                                            ? "border-primary ring-2 ring-primary/20 bg-muted/40 shadow-sm" 
+                                                            : "border-border hover:border-muted-foreground/30"
+                                                    )}
+                                                    title={t.name}
+                                                >
+                                                    {/* Overlapping mini color bubbles inside the button */}
+                                                    <div className="flex items-center -space-x-1.5">
+                                                        <div className="w-3.5 h-3.5 rounded-full border border-black/5" style={{ backgroundColor: t.previewColors[0] }} />
+                                                        <div className="w-3.5 h-3.5 rounded-full border border-black/5" style={{ backgroundColor: t.previewColors[1] }} />
+                                                        <div className="w-3.5 h-3.5 rounded-full border border-black/5" style={{ backgroundColor: t.previewColors[3] }} />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
                                  <button
                                     onClick={() => {

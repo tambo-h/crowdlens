@@ -11,7 +11,7 @@ import { InspirationQuote } from "@/components/productivity/inspiration-quote";
 import { LinkCard } from "@/components/productivity/link-card";
 import { ProductivityRules } from "@/components/productivity/productivity-rules";
 import { ChatSidePanel } from "@/components/tambo/chat-side-panel";
-import { ProductivityProvider, useProductivity } from "@/context/productivity-context";
+import { ProductivityProvider, useProductivity, THEMES } from "@/context/productivity-context";
 import { components, tools } from "@/lib/tambo";
 import { TamboProvider } from "@tambo-ai/react";
 import { XPToastProvider } from "@/components/productivity/xp-toast";
@@ -40,7 +40,9 @@ import {
   Sun,
   Loader2,
   Crown,
-  Mountain
+  Mountain,
+  Palette,
+  Check
 } from "lucide-react";
 
 // Creative tool imports
@@ -80,24 +82,103 @@ const GlobalLoadingOverlay = ({ isProcessingAI }: { isProcessingAI: boolean }) =
   );
 };
 
+function ThemePicker() {
+  const { theme, setTheme } = useProductivity();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all active:scale-95 flex items-center justify-center outline-none"
+        title="Choose Theme"
+      >
+        <Palette className="w-5 h-5" />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 mt-2 w-64 rounded-2xl bg-card border border-border p-3 shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
+            style={{ transformOrigin: "top right" }}
+          >
+            <div className="px-2 py-1.5 mb-2 border-b border-border/50">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">App Themes</span>
+            </div>
+            <div className="space-y-1.5 max-h-80 overflow-y-auto custom-scrollbar">
+              {THEMES.map((t) => {
+                const isSelected = theme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={async () => {
+                      await setTheme(t.id);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between p-2 rounded-xl text-left transition-all text-xs font-bold cursor-pointer",
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10"
+                        : "text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {/* Color dots preview */}
+                      <div className="flex items-center gap-0.5 border border-border/40 p-0.5 rounded-md bg-background">
+                        {t.previewColors.map((color, idx) => (
+                          <div
+                            key={idx}
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      <span className="truncate">{t.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "text-[9px] uppercase font-black px-1.5 py-0.5 rounded",
+                        isSelected
+                          ? "bg-white/20 text-white"
+                          : t.mode === "dark"
+                            ? "bg-slate-850 text-slate-400"
+                            : "bg-slate-200 text-slate-600"
+                      )}>
+                        {t.mode}
+                      </span>
+                      {isSelected && <Check className="w-3 h-3" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function HomeContent() {
   const { activeView, setActiveView, isChatOpen, setIsChatOpen, challenges, triggerCreativeRefresh, userId, currentEnergy, confirmState, closeConfirm, lastSetupRole, setLastSetupRole, isLoadingChallenges } = useProductivity();
   const isLowEnergy = currentEnergy !== null && currentEnergy <= 3;
 
-  const [isDarkPref, setIsDarkPref] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
-
-  // Auto switch to dark mode on low energy
-  const isDark = isLowEnergy || isDarkPref;
-
-  React.useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
 
   // Seamless redirect + scroll to newly created skill track
   React.useEffect(() => {
@@ -329,9 +410,7 @@ function HomeContent() {
             <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
               <Bell className="w-5 h-5" />
             </button>
-            <button onClick={() => setIsDarkPref(!isDarkPref)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-all">
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <ThemePicker />
             <ProfileMenu />
           </div>
         </header>

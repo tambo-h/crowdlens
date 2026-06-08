@@ -8,6 +8,23 @@ export interface GoogleProfile {
     picture?: string;
 }
 
+export interface ThemeOption {
+  id: string;
+  name: string;
+  mode: "light" | "dark";
+  previewColors: string[]; // [bg, primary, secondary, accent]
+}
+
+export const THEMES: ThemeOption[] = [
+  { id: "doodle-white", name: "Doodle White", mode: "light", previewColors: ["#f5f0eb", "#3d3d3d", "#d6cfc7", "#c4b5a5"] },
+  { id: "nordic-frost", name: "Nordic Frost", mode: "light", previewColors: ["#eceff4", "#88c0d0", "#d8dee9", "#81a1c1"] },
+  { id: "vscode-dark", name: "VS Code Dark+", mode: "dark", previewColors: ["#1e1e1e", "#007acc", "#264f78", "#6a9955"] },
+  { id: "cyberpunk", name: "Cyberpunk Neon", mode: "dark", previewColors: ["#0a0813", "#ff0055", "#00f0ff", "#9d00ff"] },
+  { id: "aura-midnight", name: "Aura Midnight", mode: "dark", previewColors: ["#0a0910", "#a78bfa", "#fecdd3", "#ec4899"] },
+  { id: "forest-moss", name: "Forest Moss", mode: "dark", previewColors: ["#0f1410", "#4d7c0f", "#a3e635", "#15803d"] },
+  { id: "solarized-amber", name: "Solarized Amber", mode: "dark", previewColors: ["#002b36", "#b58900", "#2aa198", "#cb4b16"] },
+];
+
 interface PomodoroState {
     isRunning: boolean;
     timeLeft: number;
@@ -101,6 +118,10 @@ interface ProductivityContextType {
     savePersona: (persona: UserPersona) => Promise<void>;
     isOnboardingOpen: boolean;
     setIsOnboardingOpen: (open: boolean) => void;
+
+    // Theme System
+    theme: string;
+    setTheme: (theme: string) => Promise<void>;
 }
 
 const ProductivityContext = createContext<ProductivityContextType | undefined>(undefined);
@@ -129,17 +150,72 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
     // Onboarding / Persona state
     const [persona, setPersona] = useState<UserPersona | null>(null);
     const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+    const [theme, setThemeState] = useState<string>("doodle-white");
+
+    // Pre-mount theme loading
+    useEffect(() => {
+        const localTheme = localStorage.getItem("taskstack_theme");
+        if (localTheme) {
+            setThemeState(localTheme);
+        }
+    }, []);
 
     useEffect(() => {
         if (userId) {
             import("@/services/productivity-service")
                 .then(m => m.getUserPersona(userId))
                 .then(p => {
-                    if (p) setPersona(p);
+                    if (p) {
+                        setPersona(p);
+                        if (p.theme) {
+                            setThemeState(p.theme);
+                            localStorage.setItem("taskstack_theme", p.theme);
+                        } else {
+                            const localTheme = localStorage.getItem("taskstack_theme");
+                            if (localTheme) setThemeState(localTheme);
+                        }
+                    }
                 })
                 .catch(err => console.error("Failed to load persona", err));
         } else {
             setPersona(null);
+        }
+    }, [userId]);
+
+    // Apply theme and dark mode dynamically
+    useEffect(() => {
+        // Clean up previous themes
+        THEMES.forEach(t => {
+            document.documentElement.classList.remove(`theme-${t.id}`);
+        });
+
+        // Add current theme class
+        document.documentElement.classList.add(`theme-${theme}`);
+
+        // Handle dark mode class
+        const currentThemeObj = THEMES.find(t => t.id === theme);
+        const isThemeDark = currentThemeObj ? currentThemeObj.mode === "dark" : false;
+        
+        // Auto switch to dark mode on low energy or if theme is dark
+        const shouldBeDark = isThemeDark || (currentEnergy !== null && currentEnergy <= 3);
+
+        if (shouldBeDark) {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }, [theme, currentEnergy]);
+
+    const setTheme = useCallback(async (newTheme: string) => {
+        setThemeState(newTheme);
+        localStorage.setItem("taskstack_theme", newTheme);
+        
+        if (userId) {
+            const { saveUserPersona, getUserPersona } = await import("@/services/productivity-service");
+            const currentPersona = await getUserPersona(userId) || {};
+            const updatedPersona = { ...currentPersona, theme: newTheme };
+            await saveUserPersona(userId, updatedPersona);
+            setPersona(updatedPersona);
         }
     }, [userId]);
 
@@ -148,8 +224,9 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
         setIsProcessingAI(true);
         try {
             const { saveUserPersona, setupPersonalizedWorkspace, getChallenges } = await import("@/services/productivity-service");
-            await saveUserPersona(userId, newPersona);
-            setPersona(newPersona);
+            const personaToSave = { ...newPersona, theme };
+            await saveUserPersona(userId, personaToSave);
+            setPersona(personaToSave);
 
             // Create 1 dynamic skills track if not already present
             const currentChallenges = await getChallenges(userId);
@@ -577,7 +654,8 @@ export function ProductivityProvider({ children }: { children: React.ReactNode }
             isProcessingAI, setIsProcessingAI,
             lastSetupRole, setLastSetupRole,
             persona, savePersona: handleSavePersona,
-            isOnboardingOpen, setIsOnboardingOpen
+            isOnboardingOpen, setIsOnboardingOpen,
+            theme, setTheme
         }}>
             {children}
         </ProductivityContext.Provider>
